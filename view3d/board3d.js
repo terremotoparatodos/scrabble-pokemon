@@ -2,9 +2,9 @@
  * Tablero 3D: une la escena (stage.js), la cámara (camera.js), los atriles
  * y la bolsa (racks.js), el mouse (mouse.js), los compañeros y los efectos.
  *
- * Primera persona: si la vista tiene un jugador propio (view.me), la cámara
- * se sienta en su asiento, las letras se giran para que las lea derecho y
- * puede arrastrar sus fichas. Sin jugador propio: vista general (público).
+ * En 1v1 todas las cámaras y letras miran de frente desde el mismo lado.
+ * El dueño del atril sigue siendo view.me, independientemente de la cámara.
+ * Con tres o cuatro jugadores se conserva la orientación por asiento.
  *
  * render(view, extra) solo dibuja lo que recibe; las intenciones (poner,
  * mover, quitar fichas…) van a `input` (play-panel.js), que las valida.
@@ -65,6 +65,9 @@ export function createBoard3D(container, input) {
 
   let pov = null;
   let angle = 0;
+  const viewListeners = [];
+  let lastCameraSignature = '';
+  let lastCameraNotice = 0;
   const placed = new Map(); // idx → tile
   const pending = new Map(); // idx → tile
 
@@ -194,7 +197,8 @@ export function createBoard3D(container, input) {
   }
 
   function render(view, extra) {
-    const nextPov = view.me >= 0 ? view.players[view.me].seat : null;
+    const ownerSeat = view.me >= 0 ? view.players[view.me].seat : extra?.seat ?? null;
+    const nextPov = window.LiveView.cameraSeat(view, extra && extra.seat);
     if (nextPov !== pov) {
       pov = nextPov;
       director.setPov(pov);
@@ -249,7 +253,7 @@ export function createBoard3D(container, input) {
 
     if (change && change.kind === 'play') racks.play(change.seat, change.cells, change.drawn, land);
     else if (change && change.kind === 'exchange') racks.exchange(change.seat, change.count);
-    racks.sync(view, extra, pov);
+    racks.sync(view, extra, ownerSeat);
 
     framesUsed = 0;
     const hint = extra && extra.hint;
@@ -402,6 +406,14 @@ export function createBoard3D(container, input) {
     scenery.update(dt, t);
     director.update(dt, t);
     renderer.render(scene, camera);
+    if (viewListeners.length && now - lastCameraNotice >= 50) {
+      const signature = JSON.stringify(director.getUserView());
+      if (signature !== lastCameraSignature) {
+        lastCameraSignature = signature;
+        lastCameraNotice = now;
+        viewListeners.forEach((fn) => fn());
+      }
+    }
   }
   requestAnimationFrame(frameLoop);
 
@@ -413,6 +425,10 @@ export function createBoard3D(container, input) {
     resetView: () => director.resetUser(),
     previewDrop,
     clearDrop,
+    getCameraView: () => director.getUserView(),
+    getCameraSeat: () => pov,
+    setCameraView: (view) => director.setUserView(view),
+    onViewChange: (fn) => viewListeners.push(fn),
     /** Espacio libre del lienzo (px, relativo al lienzo) donde debe entrar el tablero. */
     setSafeArea(rect) {
       safeRect = rect;

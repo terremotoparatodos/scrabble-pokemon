@@ -37,6 +37,10 @@
   let shownMove = 0;
   let curtainOpenFor = null; // clave del turno cuya cortina ya se levantó
   const listeners = [];
+  const previewListeners = [];
+  let liveKey = Math.random().toString(36).slice(2);
+  let livePreview = null;
+  let previewSignature = '';
 
   // ── Persistencia ──
   function save() {
@@ -74,6 +78,9 @@
   }
 
   function changed() {
+    liveKey = Math.random().toString(36).slice(2);
+    livePreview = null;
+    previewSignature = '';
     save();
     render();
     listeners.forEach((fn) => fn());
@@ -132,7 +139,7 @@
       const res = act(current().seat, action);
       if (!res.ok) toast(`✗ ${res.error}`);
     },
-    onChange: () => renderBoard(),
+    onChange: () => { renderBoard(); publishLocalView(); },
     getDropTarget: () => activeBoard(),
   });
 
@@ -149,7 +156,44 @@
   function hostView() {
     const p = current();
     const local = state.phase === 'play' && isLocalHuman(p);
-    return G.publicView(state, local ? p.seat : null);
+    return publicView(local ? p.seat : null);
+  }
+
+  function publicView(seat) {
+    return state ? { ...G.publicView(state, seat), liveKey } : null;
+  }
+
+  function presentationView() {
+    if (!state) return null;
+    const draft = livePreview?.key === liveKey ? livePreview : { key: liveKey, seat: current().seat, pending: [], cursor: null, view3d: has3d(), camera: { alt: false, yaw: 0, pitch: 0, zoom: 1, pan: { x: 0, z: 0 } } };
+    return { ...draft, hint: state.hint?.player === state.turn ? state.hint : null };
+  }
+
+  function receivePreview(seat, input) {
+    if (!state) return false;
+    const clean = window.LiveView.clean(state, seat, input, liveKey);
+    if (!clean) return false;
+    const signature = JSON.stringify(clean);
+    if (signature === previewSignature) return true;
+    livePreview = clean;
+    previewSignature = signature;
+    if (isRemote(seat)) renderBoard();
+    previewListeners.forEach((fn) => fn());
+    return true;
+  }
+
+  function publishLocalView() {
+    if (!state || state.phase !== 'play' || !isLocalHuman(current())) return;
+    const view = hostView();
+    const extra = curtainUp(view) ? {} : panel.boardExtra();
+    receivePreview(current().seat, window.LiveView.pack(view, extra, has3d(), board3d?.getCameraView()));
+  }
+
+  function clearPreview(seat) {
+    if (livePreview?.seat !== seat) return;
+    livePreview = null;
+    previewSignature = '';
+    previewListeners.forEach((fn) => fn());
   }
 
   // ── Vista 3D (view3d/, módulo que llega después; ver «board3d-ready») ──
@@ -169,7 +213,10 @@
   const activeBoard = () => (has3d() ? board3d : board);
 
   function apply3d() {
-    if (use3d && !board3d && window.Board3D) board3d = window.Board3D.create($('board3dCanvas'), panel);
+    if (use3d && !board3d && window.Board3D) {
+      board3d = window.Board3D.create($('board3dCanvas'), panel);
+      board3d.onViewChange(publishLocalView);
+    }
     $('board3dWrap').hidden = !has3d();
     $('boardFrame').hidden = has3d();
     $('btnView3d').hidden = !window.Board3D;
@@ -215,7 +262,9 @@
 
   function renderBoard() {
     const view = hostView();
-    activeBoard().render(view, view.me >= 0 && !curtainUp(view) ? panel.boardExtra() : null);
+    const extra = view.me >= 0 ? (!curtainUp(view) ? panel.boardExtra() : null) : presentationView();
+    activeBoard().render(view, extra);
+    if (view.me < 0 && has3d() && extra?.camera) board3d.setCameraView(extra.camera);
   }
 
   const turnKey = () => `${state.round}:${state.turn}`;
@@ -357,6 +406,7 @@
     renderLog(view);
     maybeReveal(view);
     renderEnd(view);
+    publishLocalView();
   }
 
   // ── Eventos ──
@@ -417,8 +467,12 @@
     act,
     inGame: () => !!state,
     isPlayerSeat: (seat) => !!state && playerIndex(seat) >= 0 && !state.players[playerIndex(seat)].bot,
-    publicView: (seat) => (state ? G.publicView(state, seat) : null),
-    spectatorView: () => (state ? G.spectatorView(state) : null),
+    publicView,
+    spectatorView: () => (state ? { ...G.spectatorView(state), liveKey } : null),
+    presentationView,
+    receivePreview,
+    clearPreview,
+    onPreviewUpdate: (fn) => previewListeners.push(fn),
     setRemoteSeats(fn) {
       isRemote = fn;
       if (state) render();

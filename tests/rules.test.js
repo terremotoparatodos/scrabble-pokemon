@@ -8,7 +8,7 @@
 const assert = require('node:assert/strict');
 const path = require('node:path');
 
-for (const f of ['pokedex.js', 'rules.js', 'moves.js', 'game.js']) require(path.join(__dirname, '..', f));
+for (const f of ['pokedex.js', 'rules.js', 'moves.js', 'game.js', 'live-view.js']) require(path.join(__dirname, '..', f));
 const R = globalThis.ScrabbleRules;
 const M = globalThis.ScrabbleMoves;
 const G = globalThis.ScrabbleGame;
@@ -55,6 +55,37 @@ test('OBS observa sin asiento y mantiene privados los atriles de todos los jugad
   assert.equal(G.publicView(state, 0).players[1].rack, null);
   assert.ok(G.publicView(state, 0).players[0].rack);
   assert.ok(G.publicView(state, null).players.every((p) => p.rack === null));
+});
+
+test('1v1 usa la misma cámara frontal sin importar asiento o jugador propio', () => {
+  for (const me of [-1,0,1]) assert.equal(globalThis.LiveView.cameraSeat({players:[{seat:2},{seat:3}],me},3),0);
+  assert.equal(globalThis.LiveView.cameraSeat({players:[{seat:0},{seat:1},{seat:3}],me:2}),3);
+  assert.equal(globalThis.LiveView.cameraSeat({players:[{seat:0},{seat:1},{seat:3}],me:-1},1),1);
+});
+
+test('el borrador solo acepta las fichas del turno actual sin modificar la partida', () => {
+  const state=G.createGame({players:[0,1].map(seat=>({seat,name:`J${seat}`,avatar:25,color:'#000'})),rounds:10},seeded(55));
+  state.players[0].rack=[...'M*WSEELANNXX'];
+  const before=JSON.stringify(state);
+  const draft={key:'turn-a',view3d:true,camera:{alt:false,yaw:0,pitch:0,zoom:1,pan:{x:0,z:0}},cursor:{r:7,c:6,dir:'H'},pending:[{r:7,c:6,i:0,l:'M'},{r:7,c:7,i:1,l:'E'},{r:7,c:8,i:2,l:'W'}]};
+  const live=globalThis.LiveView.clean(state,0,draft,'turn-a');
+  assert.equal(live.pending[1].blank,true);
+  assert.equal(live.pending[1].l,'E');
+  assert.equal(live.pending[0].i,undefined);
+  assert.equal(live.rack,undefined);
+  assert.equal(JSON.stringify(state),before);
+  assert.equal(globalThis.LiveView.clean(state,1,draft,'turn-a'),null);
+  assert.equal(globalThis.LiveView.clean(state,0,draft,'turn-b'),null);
+  for(const pending of [
+    [{r:7,c:6,i:0,l:'Z'}],
+    [{r:7,c:6,i:0,l:'M'},{r:7,c:7,i:0,l:'M'}],
+    [{r:7,c:6,i:0,l:'M'},{r:7,c:6,i:2,l:'W'}],
+    [{r:15,c:6,i:0,l:'M'}],
+    [{r:7,c:6,i:1,l:'*'}],
+  ])assert.equal(globalThis.LiveView.clean(state,0,{...draft,pending},'turn-a'),null);
+  state.board[R.idx(7,6)]={l:'M',s:0,m:1};
+  assert.equal(globalThis.LiveView.clean(state,0,draft,'turn-a'),null);
+  assert.equal(globalThis.LiveView.clean(state,0,{...draft,pending:[],camera:{...draft.camera,zoom:Infinity}},'turn-a'),null);
 });
 
 test('diccionario con los 1025 Pokémon y nombres normalizados', () => {

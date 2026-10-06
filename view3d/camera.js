@@ -159,7 +159,7 @@ export function createCameraDirector(camera) {
     setPov(seat) {
       if (seat === pov) return null;
       pov = seat;
-      resetUser();
+      resetUser(false);
       if (!ready) return snap(); // primera vez: directo, sin vuelo
       return moveTo(1300);
     },
@@ -171,6 +171,17 @@ export function createCameraDirector(camera) {
       return moveTo(800);
     },
     isAlt: () => altView,
+    getUserView: () => ({ alt: altView, yaw: ((user.yaw + Math.PI) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI) - Math.PI, pitch: user.pitch, zoom: user.zoom, pan: { x: user.pan.x, z: user.pan.z } }),
+    setUserView(view) {
+      if (!view) return;
+      const changedAlt = altView !== view.alt;
+      altView = view.alt;
+      user.yaw = view.yaw;
+      user.pitch = view.pitch;
+      user.zoom = view.zoom;
+      user.pan.set(view.pan.x, 0, view.pan.z);
+      if (changedAlt) snap();
+    },
 
     /** Espacio libre del lienzo (px): x, y, w, h dentro de W × H. */
     setSafeArea(rect) {

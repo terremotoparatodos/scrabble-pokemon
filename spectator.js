@@ -12,6 +12,7 @@
   let last = null;
   let shownMove = null;
   let board3d = null;
+  let cameraSignature = '';
   let safeRect = null;
   // El audio sale de la pantalla principal, para que OBS no lo duplique.
   window.GameAudio = { play() {}, observe() {} };
@@ -47,8 +48,9 @@
 
   function apply3d() {
     if (!board3d && window.Board3D) board3d = window.Board3D.create($('board3dCanvas'), { tapCell() {}, movePending() {}, removeAt() {}, isOverRack: () => false });
-    $('board3dWrap').hidden = !board3d;
-    $('boardFrame').hidden = !!board3d;
+    const use3d = !!board3d && last?.preview?.view3d !== false;
+    $('board3dWrap').hidden = !use3d;
+    $('boardFrame').hidden = use3d;
     if (board3d && safeRect) board3d.setSafeArea(safeRect);
     if (last?.game) render();
   }
@@ -77,11 +79,36 @@
       el('div', { class: 'hud-who' }, [el('small', { text: 'Turno de' }), el('strong', { text: p.name })]),
       BV.recommendedTypeChip(p.type, true), meta,
     ] : [el('strong', { text: `🏆 ${g.winners.map((i) => g.players[i].name).join(' y ')} ${g.winners.length > 1 ? 'empatan' : 'gana'}` }), meta]));
-    const activeBoard = board3d || board;
-    activeBoard.render(g, { editable: false });
+    drawBoard();
     if (shownMove == null || g.moveNo < shownMove) shownMove = g.moveNo;
-    if (g.moveNo > shownMove && g.log[0]?.kind === 'play' && g.log[0].n === g.moveNo && board3d) board3d.celebrate(g);
+    if (g.moveNo > shownMove && g.log[0]?.kind === 'play' && g.log[0].n === g.moveNo && board3d && !$('board3dWrap').hidden) board3d.celebrate(g);
     shownMove = g.moveNo;
+    safeArea.schedule();
+  }
+
+  function drawBoard() {
+    const g = last?.game;
+    if (!g) return;
+    const draft = last.preview?.key === g.liveKey ? last.preview : null;
+    const extra = { ...draft, editable: false };
+    const use3d = !!board3d && draft?.view3d !== false;
+    $('board3dWrap').hidden = !use3d;
+    $('boardFrame').hidden = use3d;
+    (use3d ? board3d : board).render(g, extra);
+    if (use3d && draft?.camera) {
+      const signature = JSON.stringify([draft.seat, draft.key, draft.camera]);
+      if (signature !== cameraSignature) { cameraSignature = signature; board3d.setCameraView(draft.camera); }
+    }
+    const pending = draft?.pending || [];
+    const info = $('spectatorPreview');
+    info.replaceChildren();
+    if (pending.length) {
+      const result = window.ScrabbleRules.validatePlay({ board: g.board, placements: pending, type: g.players[g.turn].type, used: g.used });
+      info.textContent = result.ok ? `En preparación: ${result.entries[0].name} · ${result.score} puntos` : `En preparación · ${result.error}`;
+    } else if (draft?.hint) {
+      info.textContent = `💡 Pista: ${window.ScrabbleRules.DEX[draft.hint.id - 1].name}`;
+    }
+    $('hudBottom').hidden = !info.textContent;
     safeArea.schedule();
   }
 
@@ -126,6 +153,7 @@
       if (conn !== c || !Net.isMessage(msg, true)) return;
       lastHeard = Date.now();
       if (msg.t === 'state' && msg.spectator) { last = msg; status(''); render(); }
+      else if (msg.t === 'preview' && last?.game && msg.preview?.key === last.game.liveKey) { last.preview = msg.preview; drawBoard(); }
     });
     c.on('close', () => { if (conn === c) { conn = null; status('Reconectando con la sala…'); retryLater(); } });
     c.on('error', () => {

@@ -120,6 +120,7 @@
     c.on('open', () => {
       if (c !== conn) return;
       lastHeard = Date.now();
+      lastPreviewSignature = '';
       setStatus(`Sala ${code}`, 'ok');
       if (me.seat != null) sendJoin(me.seat);
     });
@@ -298,7 +299,7 @@
   const panel = window.PlayPanel.create({
     container: $('playPanel'),
     send: (action) => send({ t: 'act', a: action.type, tiles: action.tiles, indices: action.indices, swapType: action.swapType }),
-    onChange: () => activeBoard().render(last.game, panel.boardExtra()),
+    onChange: () => { activeBoard().render(last.game, panel.boardExtra()); schedulePreview(); },
     getDropTarget: () => activeBoard(),
   });
 
@@ -315,9 +316,27 @@
   })();
   const has3d = () => use3d && !!board3d;
   const activeBoard = () => (has3d() ? board3d : board);
+  let previewTimer = null;
+  let lastPreviewSignature = '';
+  function schedulePreview() {
+    if (previewTimer) return;
+    previewTimer = setTimeout(() => {
+      previewTimer = null;
+      const g = last?.game;
+      if (!conn?.open || !g || g.phase !== 'play' || g.me !== g.turn) return;
+      const preview = window.LiveView.pack(g, panel.boardExtra(), has3d(), board3d?.getCameraView());
+      const signature = JSON.stringify(preview);
+      if (signature === lastPreviewSignature) return;
+      lastPreviewSignature = signature;
+      conn.send({ t: 'preview', preview });
+    }, 50);
+  }
 
   function apply3d() {
-    if (use3d && !board3d && window.Board3D) board3d = window.Board3D.create($('board3dCanvas'), panel);
+    if (use3d && !board3d && window.Board3D) {
+      board3d = window.Board3D.create($('board3dCanvas'), panel);
+      board3d.onViewChange(schedulePreview);
+    }
     $('board3dWrap').hidden = !has3d();
     $('boardFrame').hidden = has3d();
     $('btnCam').hidden = !has3d();
@@ -375,6 +394,7 @@
     );
     panel.update(g);
     activeBoard().render(g, panel.boardExtra());
+    schedulePreview();
     renderOver(g);
     maybeReveal(g);
     safeArea.schedule();

@@ -142,6 +142,7 @@
     conns.delete(conn);
     if (conn.open) conn.close();
     if (conn.seat != null && seatConn[conn.seat] === conn) {
+      Game.clearPreview(conn.seat);
       toast(`📴 ${seatName(conn.seat)} se desconectó`);
       releaseSeat(conn.seat, { forget: false });
     }
@@ -178,10 +179,14 @@
         return handleJoin(conn, msg);
       case 'leave':
         if (conn.seat != null && seatConn[conn.seat] === conn) {
+          Game.clearPreview(conn.seat);
           releaseSeat(conn.seat, { forget: true });
           conn.seat = null;
           afterSeatsChanged();
         }
+        return;
+      case 'preview':
+        if (!conn.spectator && conn.seat != null && seatConn[conn.seat] === conn) Game.receivePreview(conn.seat, msg.preview);
         return;
       case 'act': {
         if (conn.spectator) return reply(conn, { t: 'error', msg: 'La vista OBS solo permite observar.' });
@@ -239,7 +244,7 @@
   }
 
   function sendState(conn) {
-    reply(conn, { t: 'state', room: code, you: conn.seat, spectator: !!conn.spectator, lobby: lobbyView(), game: conn.spectator ? Game.spectatorView() : Game.publicView(conn.seat) });
+    reply(conn, { t: 'state', room: code, you: conn.seat, spectator: !!conn.spectator, lobby: lobbyView(), game: conn.spectator ? Game.spectatorView() : Game.publicView(conn.seat), ...(conn.spectator ? { preview: Game.presentationView() } : {}) });
   }
 
   function scheduleBroadcast() {
@@ -283,7 +288,7 @@
         el('input', { class: 'room-link-input', attrs: { type: 'text', readonly: true, value: url, 'aria-label': 'Enlace para jugadores' } }),
         el('button', { class: 'btn', text: '📋 Copiar', attrs: { type: 'button' }, on: { click: () => copyLink(url) } }),
       ]),
-      el('p', { class: 'room-help', text: '🎥 OBS: cámaras más altas, con su interior transparente y el fondo original en el resto de la pantalla. Usa este enlace como fuente Navegador y coloca tus cámaras debajo. Mantén abierta esta pantalla.' }),
+      el('p', { class: 'room-help', text: '🎥 OBS sigue al jugador en turno y muestra la jugada mientras la prepara. Cámaras más altas, transparentes por dentro y con el fondo original alrededor. Usa este enlace como fuente Navegador y coloca tus cámaras debajo. Mantén abierta esta pantalla.' }),
       el('div', { class: 'room-link' }, [
         el('input', { class: 'room-link-input', attrs: { type: 'text', readonly: true, value: obsUrl, 'aria-label': 'Enlace OBS' } }),
         el('button', { class: 'btn', text: '📋 Copiar OBS', attrs: { type: 'button' }, on: { click: () => copyLink(obsUrl) } }),
@@ -313,6 +318,10 @@
 
   setInterval(sweepDeadConns, Net.PING_MS);
   Game.onUpdate(scheduleBroadcast);
+  Game.onPreviewUpdate(() => {
+    const msg = { t: 'preview', preview: Game.presentationView() };
+    for (const conn of conns) if (conn.spectator) reply(conn, msg);
+  });
   Setup.onChange(() => {
     renderPanels();
     scheduleBroadcast();

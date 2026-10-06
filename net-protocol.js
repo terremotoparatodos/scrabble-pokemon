@@ -15,11 +15,13 @@
  *   { t:'act', a:'pass' } · { t:'act', a:'hint' }
  *   { t:'ping' }                              latido (cada PING_MS)
  *   { t:'spectate' }                          vista OBS sin asiento ni atriles privados
+ *   { t:'preview', preview }                 jugada en preparación y cámara del jugador en turno
  *
  * Anfitrión → celular
  *   { t:'state', room, you, lobby, game }     foto tras cada cambio; `game` solo
  *                                             incluye el atril de ese asiento
  *   { t:'joined', seat } · { t:'kicked' } · { t:'error', msg } · { t:'pong' }
+ *   { t:'preview', preview }                 solo a OBS: borrador validado, sin cambiar la partida
  */
 (function () {
   'use strict';
