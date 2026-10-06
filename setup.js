@@ -44,7 +44,10 @@
         if (AVATARS.includes(s.avatar)) seats[i].avatar = s.avatar;
         if (MODES.some(([m]) => m === s.mode)) seats[i].mode = s.mode;
       });
-      if (Number.isInteger(saved.rounds) && saved.rounds >= 0 && saved.rounds <= 99) rounds = saved.rounds;
+      if (Number.isInteger(saved.rounds) && saved.rounds >= 0 && saved.rounds <= 99) {
+        // Actualizar el anterior valor inicial sin tocar las partidas en curso.
+        rounds = saved.durationVersion !== 2 && saved.rounds === 8 ? 10 : saved.rounds;
+      }
     } catch (err) {
       console.warn('No se pudo leer la configuración guardada:', err);
     }
@@ -52,7 +55,7 @@
 
   function save() {
     try {
-      localStorage.setItem(SETUP_KEY, JSON.stringify({ seats: seats.map(({ name, avatar, mode }) => ({ name, avatar, mode })), rounds }));
+      localStorage.setItem(SETUP_KEY, JSON.stringify({ seats: seats.map(({ name, avatar, mode }) => ({ name, avatar, mode })), rounds, durationVersion: 2 }));
     } catch (err) {
       console.warn('No se pudo guardar la configuración:', err);
     }
