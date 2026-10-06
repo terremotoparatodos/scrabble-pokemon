@@ -4,6 +4,20 @@ Scrabble de Pokémon para 2 a 4 jugadores, con el estilo y el sistema de sala
 de **Pokémon Party** (Carrera de Medallas). Cada palabra tiene que ser uno de
 los **1025 Pokémon**.
 
+## Jugar en GitHub Pages
+
+Abre [Pokémon Scrabble](https://terremotoparatodos.github.io/scrabble-pokemon/)
+en el navegador. No necesitas instalar nada ni correr un servidor local.
+
+Para jugar desde celulares, crea una sala en la pantalla principal y comparte
+el enlace que aparece. Mantén esa pantalla abierta: allí se guarda y se
+coordina la partida. Todos los dispositivos necesitan internet; la conexión
+entre jugadores usa PeerJS/WebRTC y depende de que la red lo permita.
+
+El sitio se publica desde la raíz de la rama `main` con GitHub Pages. Los
+cambios en esa rama se publican automáticamente. `.nojekyll` permite servir
+directamente los archivos estáticos, incluidos los modelos y las librerías.
+
 ## Cómo jugar
 
 | Forma | Qué hace falta |
@@ -18,7 +32,7 @@ principal y en su celular, que además muestra **solo sus fichas**. Los asientos
 pueden ser personas, bots o quedar vacíos.
 
 ```bash
-python -m http.server 8766 --directory games/scrabble-pokemon
+python -m http.server 8766
 ```
 
 La PC necesita internet: PeerJS usa su servidor público para presentar los
@@ -137,7 +151,7 @@ de la pantalla principal (al recargar sigue donde estaba).
 Pruebas (reglas, regla de oro y partidas completas de bots):
 
 ```bash
-node games/scrabble-pokemon/tests/rules.test.js
+npm test
 ```
 
 Revisión de superposiciones (en el navegador, con una partida abierta):
@@ -148,7 +162,7 @@ atril y con un aviso visible, y la página del jugador en 1024×640 a 1920×1080
 
 ## Recursos Pokémon (uso privado)
 
-Proyecto para jugar entre amigos, sin publicar. `assets/sprites/` (sprites de
+Proyecto de fans para jugar entre amigos, sin fines comerciales. `assets/sprites/` (sprites de
 los 1025) y los datos de `pokedex.js` vienen de [PokeAPI](https://github.com/PokeAPI);
 `assets/types/`, `assets/town/` (edificios), `vendor/` (PeerJS y three.js) y
 `models/` (modelos de [Cobblemon](https://cobblemon.tools)) se copiaron de
