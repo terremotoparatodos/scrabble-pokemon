@@ -50,13 +50,14 @@ export function createTileFactory(scene) {
   }
 
   /** Cambia la cara. angle: giro de la letra para que la lea quien mira (su asiento). */
-  function skin(tile, letter, owner, state, angle) {
+  function skin(tile, letter, owner, state, angle, blank = false) {
     tile.top.rotation.z = angle || 0;
-    const key = `${letter}|${owner}|${state}`;
+    const key = `${letter}|${owner}|${state}|${blank}`;
     if (tile.key === key) return;
     tile.key = key;
     tile.letter = letter;
-    tile.top.material.map = tileTexture(letter, owner, state);
+    tile.blank = blank;
+    tile.top.material.map = tileTexture(letter, owner, state, blank);
     tile.top.material.emissive = new THREE.Color(state === 'fresh' ? '#5c4300' : '#000000');
     tile.top.material.needsUpdate = true;
   }

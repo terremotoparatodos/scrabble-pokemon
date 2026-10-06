@@ -9,7 +9,8 @@
  * Celular → anfitrión
  *   { t:'join', seat, token, name, avatar }   ocupar o recuperar un asiento
  *   { t:'leave' }                             liberar el asiento
- *   { t:'act', a:'play', tiles:[{r,c,i}] }    crear un Pokémon (i = ficha del atril)
+ *   { t:'act', a:'play', tiles:[{r,c,i,l?}] } crear un Pokémon (l: letra del comodín)
+ *   { t:'act', a:'swap-one', indices:[i] }   cambiar una ficha sin perder el turno
  *   { t:'act', a:'exchange', indices, swapType }
  *   { t:'act', a:'pass' } · { t:'act', a:'hint' }
  *   { t:'ping' }                              latido (cada PING_MS)

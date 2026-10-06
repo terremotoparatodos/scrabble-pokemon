@@ -31,14 +31,33 @@
     let cursor = null; // { r, c, dir } para escribir con el teclado
     let exchange = null; // { idx:Set, type:bool } en modo cambio
     let deal = false; // atril nuevo: las fichas entran repartidas
+    let chooseBlank = null;
+    const blankPicker = el('dialog', { class: 'modal card blank-picker', attrs: { 'aria-labelledby': 'blankPickerTitle' } }, [
+      el('h2', { text: '★ Comodín de letra', attrs: { id: 'blankPickerTitle' } }),
+      el('p', { text: 'Elegí la letra que representará. Esta ficha vale 0 puntos.' }),
+      el('div', { class: 'blank-letters' }, [...'ABCDEFGHIJKLMNOPQRSTUVWXYZ'].map((l) =>
+        el('button', { class: 'btn', text: l, attrs: { type: 'button', 'aria-label': `Letra ${l}` }, on: { click: () => {
+          const choose = chooseBlank;
+          chooseBlank = null;
+          blankPicker.close();
+          if (choose) choose(l);
+        } } }),
+      )),
+      el('button', { class: 'btn', text: 'Cancelar', attrs: { type: 'button' }, on: { click: () => { chooseBlank = null; blankPicker.close(); } } }),
+    ]);
+    document.body.appendChild(blankPicker);
+    blankPicker.addEventListener('cancel', () => { chooseBlank = null; });
+    blankPicker.addEventListener('close', changed);
 
     const me = () => (view && view.me >= 0 ? view.players[view.me] : null);
     const myTurn = () => !!view && view.phase === 'play' && view.turn === view.me;
     const rack = () => (me() && me().rack) || [];
     const usedIdx = () => new Set(pending.map((p) => p.i));
-    const pendingLetters = () => pending.map((p) => ({ r: p.r, c: p.c, l: rack()[p.i] }));
+    const pendingLetters = () => pending.map((p) => ({ r: p.r, c: p.c, l: rack()[p.i] === R.BLANK ? p.l : rack()[p.i], blank: rack()[p.i] === R.BLANK }));
 
     function reset() {
+      chooseBlank = null;
+      if (blankPicker.open) blankPicker.close();
       selected = null;
       pending = [];
       cursor = null;
@@ -65,14 +84,26 @@
 
     const occupied = (r, c) => !!view.board[R.idx(r, c)] || pending.some((p) => p.r === r && p.c === c);
 
-    function place(r, c, i) {
-      pending.push({ r, c, i });
+    function place(r, c, i, letter, afterPlace) {
+      if (rack()[i] === R.BLANK && !letter) {
+        const forKey = key;
+        chooseBlank = (l) => {
+          if (forKey !== key || !myTurn() || occupied(r, c) || usedIdx().has(i)) return;
+          place(r, c, i, l);
+          if (afterPlace) afterPlace();
+          changed();
+        };
+        blankPicker.showModal();
+        return false;
+      }
+      pending.push({ r, c, i, ...(rack()[i] === R.BLANK ? { l: letter } : {}) });
       window.GameAudio?.play('tile');
       selected = null;
+      return true;
     }
 
     function tapCell(r, c) {
-      if (!myTurn() || exchange) return;
+      if (!myTurn() || exchange || blankPicker.open) return;
       const at = pending.findIndex((p) => p.r === r && p.c === c);
       if (at >= 0) {
         pending.splice(at, 1);
@@ -91,15 +122,18 @@
     }
 
     function tapTile(i) {
+      if (blankPicker.open) return;
       if (exchange) {
         if (exchange.idx.has(i)) exchange.idx.delete(i);
-        else exchange.idx.add(i);
+        else {
+          if (exchange.single) exchange.idx.clear();
+          exchange.idx.add(i);
+        }
         return render();
       }
       if (usedIdx().has(i)) return;
       if (cursor && myTurn()) {
-        place(cursor.r, cursor.c, i);
-        advanceCursor();
+        if (place(cursor.r, cursor.c, i, null, advanceCursor)) advanceCursor();
         return changed();
       }
       selected = selected === i ? null : i;
@@ -119,14 +153,15 @@
 
     /** Teclado (solo en pantallas con teclado): letras, Retroceso, Enter, Escape. */
     function onKey(e) {
-      if (!view || !myTurn() || exchange || e.ctrlKey || e.metaKey || e.altKey) return false;
+      if (!view || !myTurn() || exchange || blankPicker.open || e.ctrlKey || e.metaKey || e.altKey) return false;
       if (e.target && /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) return false;
       const k = e.key.length === 1 ? R.normalize(e.key) : '';
       if (k && cursor) {
         const used = usedIdx();
-        const i = rack().findIndex((l, j) => l === k && !used.has(j));
+        let i = rack().findIndex((l, j) => l === k && !used.has(j));
+        if (i < 0) i = rack().findIndex((l, j) => l === R.BLANK && !used.has(j));
         if (i < 0) return true;
-        place(cursor.r, cursor.c, i);
+        place(cursor.r, cursor.c, i, k);
         advanceCursor();
         changed();
         return true;
@@ -157,7 +192,7 @@
     function submitPlay() {
       const res = preview();
       if (!res || !res.ok) return;
-      opts.send({ type: 'play', tiles: pending.map(({ r, c, i }) => ({ r, c, i })) });
+      opts.send({ type: 'play', tiles: pending.map(({ r, c, i, l }) => ({ r, c, i, ...(l ? {l} : {}) })) });
     }
 
     function shuffle() {
@@ -180,7 +215,7 @@
         const p = view.players[view.turn];
         return el('p', { class: 'pp-status wait', text: `Espera: es el turno de ${p.name}.` });
       }
-      if (exchange) return el('p', { class: 'pp-status', text: 'Elige las fichas (y/o la ficha de tipo) que vuelven a la bolsa. Cambiar usa tu turno.' });
+      if (exchange) return el('p', { class: 'pp-status', text: exchange.single ? 'Elegí 1 ficha para cambiar sin perder el turno. Disponible una vez por ronda.' : 'Elige las fichas (y/o la ficha de tipo) que vuelven a la bolsa. Cambiar usa tu turno.' });
       const res = preview();
       if (!res) {
         return el('p', { class: 'pp-status', text: `Crea cualquier Pokémon. ${me().type === R.ANY_TYPE ? 'Comodín: todos dan x2.' : `Recomendado: ${R.typeName(me().type)} (x2 puntos).`}` });
@@ -207,7 +242,7 @@
             {
               style: deal ? { '--deal-delay': `${pos * 45}ms` } : {},
               class: `rack-slot ${deal ? 'deal' : ''} ${used.has(i) ? 'used' : ''} ${selected === i ? 'selected' : ''} ${exchange && exchange.idx.has(i) ? 'marked' : ''}`,
-              attrs: { type: 'button', disabled: used.has(i), 'data-i': i, 'aria-label': `Ficha ${p.rack[i]}`, title: turn ? 'Arrástrala al tablero' : '' },
+              attrs: { type: 'button', disabled: used.has(i), 'data-i': i, 'aria-label': p.rack[i] === R.BLANK ? 'Ficha comodín de letra' : `Ficha ${p.rack[i]}`, title: p.rack[i] === R.BLANK ? 'Comodín: cualquier letra · 0 puntos' : turn ? 'Arrástrala al tablero' : '' },
               on: { click: () => tapTile(i) },
             },
             [BV.letterTile(p.rack[i])],
@@ -215,7 +250,7 @@
         );
       const typeEl = BV.typeTile(p.type, {
         selected: exchange && exchange.type,
-        onClick: exchange
+        onClick: exchange && !exchange.single
           ? () => {
               exchange.type = !exchange.type;
               render();
@@ -225,7 +260,7 @@
 
       const actions = exchange
         ? [
-            button('🔄 Confirmar cambio', () => opts.send({ type: 'exchange', indices: [...exchange.idx], swapType: exchange.type }), 'btn-primary', !exchange.idx.size && !exchange.type),
+            button('🔄 Confirmar cambio', () => opts.send({ type: exchange.single ? 'swap-one' : 'exchange', indices: [...exchange.idx], swapType: exchange.type }), 'btn-primary', !exchange.idx.size && !exchange.type),
             button('Cancelar', () => {
               exchange = null;
               render();
@@ -239,6 +274,11 @@
               changed();
             }, '', !pending.length),
             button('🔀 Mezclar', shuffle),
+            button(p.singleSwapAvailable ? '🔄 Cambiar 1' : view.bagCount ? '🔄 Cambio usado' : '🔄 Bolsa vacía', () => {
+              reset();
+              exchange = { idx: new Set(), type: false, single: true };
+              changed();
+            }, '', !turn || !p.singleSwapAvailable),
             button('🔄 Cambiar', () => {
               reset();
               exchange = { idx: new Set(), type: false };
@@ -249,11 +289,11 @@
           ];
 
       const notes = [
-        view.turnNote ? el('p', { class: 'pp-note', text: `✨ ${view.turnNote}` }) : null,
+        view.turnNote && !view.hint ? el('p', { class: 'pp-note', text: `✨ ${view.turnNote}` }) : null,
         view.hint ? el('p', { class: 'pp-hint' }, [BV.sprite(view.hint.id, 'mini'), `Pista: ${R.DEX[view.hint.id - 1].name} (marcado en el tablero)`]) : null,
       ];
       c.replaceChildren(
-        el('div', { class: `play-panel ${turn ? 'my-turn' : ''}`, style: { '--pc': p.color } }, [
+        el('div', { class: `play-panel ${turn ? 'my-turn' : ''}`, style: { '--pc': p.color, '--rack-size': R.RACK_SIZE } }, [
           typeEl,
           el('div', { class: 'rack' }, [
             el('div', { class: 'pp-head' }, [
@@ -290,7 +330,7 @@
     });
 
     // ── Fichas puestas (arrastre en el tablero) ──
-    const canEdit = () => myTurn() && !exchange;
+    const canEdit = () => myTurn() && !exchange && !blankPicker.open;
     const freeCell = (r, c) => R.inBounds(r, c) && !occupied(r, c);
 
     /** Suelta la ficha i del atril en (r, c). */
@@ -325,7 +365,7 @@
     function boardExtra() {
       const used = usedIdx();
       return {
-        pending: pending.map((p) => ({ r: p.r, c: p.c, l: rack()[p.i], i: p.i })),
+        pending: pending.map((p) => ({ r: p.r, c: p.c, l: rack()[p.i] === R.BLANK ? p.l : rack()[p.i], i: p.i, blank: rack()[p.i] === R.BLANK })),
         cursor,
         hint: view && view.hint,
         rack: order.filter((i) => i < rack().length).map((i) => ({ i, l: rack()[i], used: used.has(i), selected: selected === i })),

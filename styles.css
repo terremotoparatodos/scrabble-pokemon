@@ -361,7 +361,7 @@ button.type-tile { cursor: pointer; }
 .pp-note { background: #f3f0ff; color: #5f3dc4; }
 .pp-hint { background: #fff9db; color: #8a5a00; }
 .rack { display: flex; gap: 10px; align-items: stretch; }
-.rack-tiles { flex: 1; display: grid; grid-template-columns: repeat(10, var(--cell)); justify-content: center; align-content: center; gap: 5px; --cell: min(52px, calc((min(100vw, var(--bw) + 40px) - 230px) / 10)); }
+.rack-tiles { flex: 1; display: grid; grid-template-columns: repeat(var(--rack-size, 12), var(--cell)); justify-content: center; align-content: center; gap: 5px; --cell: min(52px, calc((min(100vw, var(--bw) + 40px) - 230px) / 12)); }
 .rack-slot { padding: 0; border: 0; background: transparent; aspect-ratio: 1; cursor: pointer; border-radius: 6px; }
 .rack-slot.used { opacity: 0.2; cursor: default; }
 .rack-slot.selected .tile { transform: translateY(-5px); box-shadow: 0 0 0 3px #4c6ef5, 0 5px 0 #b08d43; }
@@ -455,6 +455,13 @@ button.type-tile { cursor: pointer; }
 .toast.show { animation: toast-in 0.25s ease-out; }
 
 /* ───────── Animaciones ───────── */
+/* El comodín usa los mismos botones y ventana que el resto del juego. */
+.blank-picker { margin: auto; width: min(620px, calc(100vw - 32px)); max-height: calc(100dvh - 24px); overflow: auto; }
+.blank-picker:not([open]) { display: none; }
+.blank-picker::backdrop { background: rgba(17, 24, 39, 0.65); }
+.blank-letters { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; margin: 16px 0; }
+.blank-letters .btn { font-size: 1.15rem; padding: 0.5em; }
+
 @keyframes ball-wobble {
   0%, 70%, 100% { transform: rotate(0); }
   75% { transform: rotate(-14deg); }

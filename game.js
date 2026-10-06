@@ -18,7 +18,7 @@
   const ANY_TYPE_CHANCE = 0.1; // «Comodín»: x2 para cualquier tipo
   const HINT_COST = 5;
   const LOG_MAX = 40;
-  const TURN_POLICY_VERSION = 2;
+  const TURN_POLICY_VERSION = 4;
 
   // Las fichas de tipo salen según cuántos Pokémon hay de cada tipo.
   const TYPE_WEIGHTS = R.TYPE_KEYS.map((t) => [t, R.DEX.filter((e) => e.types.includes(t)).length]);
@@ -68,6 +68,7 @@
         type: drawType(random),
         created: [],
         captures: [], // historial completo con los puntos de cada Pokémon
+        singleSwapRound: null,
       })),
       turn: 0,
       round: 1,
@@ -97,18 +98,28 @@
     state.hint = null;
     const res = M.ensurePlayable({ board: state.board, rack: p.rack, bag: state.bag, type: p.type, used: state.used, rng });
     state.turnPolicyVersion = TURN_POLICY_VERSION;
-    // El tablero debe permitir dos nombres distintos con un mismo atril.
+    // El tablero debe permitir tres nombres distintos con un mismo atril.
     if (!res.move) return finish(state, res.reason);
     p.type = res.type;
     state.turnNote = res.changed
-      ? 'La bolsa ajustó tus fichas: hay al menos 2 Pokémon distintos posibles y uno coincide con el tipo recomendado.'
+      ? 'La bolsa ajustó tus fichas: hay al menos 3 Pokémon distintos posibles y uno coincide con el tipo recomendado.'
       : res.typeChanged ? 'El tipo recomendado se ajustó para que puedas aprovechar el x2 con tus fichas.' : null;
   }
 
   /** Aplica la regla nueva a partidas guardadas, conservando una pista ya pagada. */
   function upgradeTurn(state, rng) {
     if (state.phase !== 'play' || state.turnPolicyVersion === TURN_POLICY_VERSION) return false;
+    // Las partidas anteriores aún no tenían los dos comodines en su bolsa.
+    if (!state.turnPolicyVersion || state.turnPolicyVersion < 3) {
+      const blanks = state.bag.filter((l) => l === R.BLANK).length
+        + state.players.reduce((n, p) => n + p.rack.filter((l) => l === R.BLANK).length, 0)
+        + state.board.filter((cell) => cell?.blank).length;
+      for (let n = blanks; n < 2; n++) state.bag.push(R.BLANK);
+      shuffle(state.bag, rng || Math.random);
+    }
     const hadHint = !!state.hint;
+    // Las partidas guardadas pasan de diez a doce fichas sin perder progreso.
+    for (const p of state.players) refill(p.rack, state.bag);
     startTurn(state, rng);
     if (hadHint && state.phase === 'play') {
       const p = state.players[state.turn];
@@ -116,6 +127,13 @@
       state.hint = { player: state.turn, id: R.entriesFor(move.word)[0].id, word: move.word, r: move.r, c: move.c, dir: move.dir };
     }
     return true;
+  }
+
+  function refreshHint(state) {
+    if (!state.hint) return;
+    const p = state.players[state.turn];
+    const move = M.bestMove(state.board, p.rack, p.type, state.used);
+    state.hint = { player: state.turn, id: R.entriesFor(move.word)[0].id, word: move.word, r: move.r, c: move.c, dir: move.dir };
   }
 
   function nextTurn(state, rng) {
@@ -165,12 +183,20 @@
       if (!t || !Number.isInteger(t.i) || t.i < 0 || t.i >= p.rack.length || usedIdx.has(t.i)) return { ok: false, error: 'Jugada inválida.' };
       usedIdx.add(t.i);
     }
-    const placements = tiles.map((t) => ({ r: t.r, c: t.c, l: p.rack[t.i] }));
+    for (const t of tiles) {
+      if (p.rack[t.i] === R.BLANK && (typeof t.l !== 'string' || !/^[A-Z]$/.test(t.l))) {
+        return { ok: false, error: 'Elige una letra de la A a la Z para el comodín.' };
+      }
+      if (p.rack[t.i] !== R.BLANK && t.l != null && t.l !== p.rack[t.i]) {
+        return { ok: false, error: 'Solo un comodín puede cambiar de letra.' };
+      }
+    }
+    const placements = tiles.map((t) => ({ r: t.r, c: t.c, l: p.rack[t.i] === R.BLANK ? t.l : p.rack[t.i], blank: p.rack[t.i] === R.BLANK }));
     const res = R.validatePlay({ board: state.board, placements, type: p.type, used: state.used });
     if (!res.ok) return res;
 
     state.moveNo++;
-    for (const x of placements) state.board[R.idx(x.r, x.c)] = { l: x.l, s: p.seat, m: state.moveNo };
+    for (const x of placements) state.board[R.idx(x.r, x.c)] = { l: x.l, s: p.seat, m: state.moveNo, ...(x.blank ? { blank: true } : {}) };
     p.rack = p.rack.filter((_, i) => !usedIdx.has(i));
     p.score += res.score;
     const entry = res.entries.find((e) => p.type === R.ANY_TYPE || e.types.includes(p.type)) || res.entries[0];
@@ -207,6 +233,41 @@
     return { ok: true };
   }
 
+  /** Un cambio de una sola ficha por ronda, sin consumir el turno. */
+  function swapOne(state, player, indices, rng) {
+    const wrong = checkTurn(state, player);
+    if (wrong) return { ok: false, error: wrong };
+    const p = state.players[player];
+    if (p.singleSwapRound === state.round) return { ok: false, error: 'Ya cambiaste una ficha en esta ronda.' };
+    if (!Array.isArray(indices) || indices.length !== 1 || !Number.isInteger(indices[0]) || indices[0] < 0 || indices[0] >= p.rack.length) {
+      return { ok: false, error: 'Elige exactamente una ficha para cambiar.' };
+    }
+    if (!state.bag.length) return { ok: false, error: 'No quedan fichas en la bolsa.' };
+    const i = indices[0];
+    const before = p.rack[i];
+    // El cambio conserva las tres alternativas sin tocar las demás fichas.
+    const eligible = new Set();
+    for (const l of new Set(state.bag)) {
+      if (l === before) continue;
+      const rack = p.rack.slice();
+      rack[i] = l;
+      if (new Set(M.findMoves(state.board, rack, p.type, state.used).map((m) => m.word)).size >= R.MIN_OPTIONS) eligible.add(l);
+    }
+    const choices = state.bag.map((l, at) => ({l, at})).filter((x) => eligible.has(x.l));
+    if (!choices.length) return { ok: false, error: 'No hay otra ficha en la bolsa que conserve tus tres opciones.' };
+    const choice = choices[Math.floor(rng() * choices.length)];
+    p.rack[i] = state.bag.splice(choice.at, 1)[0];
+    state.bag.push(before);
+    p.singleSwapRound = state.round;
+    const res = M.ensurePlayable({board:state.board, rack:p.rack, bag:state.bag, type:p.type, used:state.used, rng});
+    p.type = res.type;
+    state.turnNote = 'Cambiaste 1 ficha sin perder el turno. El próximo cambio gratis se habilita en la siguiente ronda.';
+    refreshHint(state);
+    state.moveNo++;
+    addLog(state, {kind:'swap-one', player, count:1});
+    return {ok:true};
+  }
+
   function pass(state, player, rng) {
     const wrong = checkTurn(state, player);
     if (wrong) return { ok: false, error: wrong };
@@ -237,6 +298,8 @@
         return play(state, player, action.tiles, rng);
       case 'exchange':
         return exchange(state, player, action.indices, action.swapType, rng);
+      case 'swap-one':
+        return swapOne(state, player, action.indices, rng || Math.random);
       case 'pass':
         return pass(state, player, rng);
       case 'hint':
@@ -277,6 +340,7 @@
         captures: captureHistory(state, p, i),
         rackCount: p.rack.length,
         rack: i === me ? p.rack : null,
+        singleSwapAvailable: p.singleSwapRound !== state.round && state.bag.length > 0,
       })),
       turnNote: me === state.turn ? state.turnNote : null,
       hint: state.hint && state.hint.player === me ? state.hint : null,

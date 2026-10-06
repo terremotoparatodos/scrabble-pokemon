@@ -49,9 +49,9 @@
   /** Ficha de letra (en el atril o en el tablero). */
   function letterTile(letter, opts) {
     const o = opts || {};
-    return el('span', { class: `tile ${o.cls || ''}`, style: o.color ? { '--owner': o.color } : {} }, [
-      el('b', { class: 'tile-letter', text: letter }),
-      el('small', { class: 'tile-pts', text: R.LETTER_POINTS[letter] }),
+    return el('span', { class: `tile ${o.cls || ''}`, style: o.color ? { '--owner': o.color } : {}, attrs: { title: o.blank ? `Comodín: ${letter} · 0 puntos` : letter === R.BLANK ? 'Comodín de letra · 0 puntos' : null } }, [
+      el('b', { class: 'tile-letter', text: letter === R.BLANK ? '★' : letter }),
+      el('small', { class: 'tile-pts', text: o.blank ? 0 : R.LETTER_POINTS[letter] }),
     ]);
   }
 
@@ -118,7 +118,7 @@
     function render(view, extra) {
       lastView = view;
       lastExtra = extra;
-      const pending = new Map(((extra && extra.pending) || []).map((p) => [R.idx(p.r, p.c), p.l]));
+      const pending = new Map(((extra && extra.pending) || []).map((p) => [R.idx(p.r, p.c), p]));
       const hint = extra && extra.hint;
       const cursor = extra && extra.cursor;
       const cursorAt = cursor ? R.idx(cursor.r, cursor.c) : -1;
@@ -133,9 +133,9 @@
         const isCenter = i === R.idx(R.CENTER, R.CENTER);
         btn.className = `cell ${prem ? `prem-${prem}` : ''} ${isCenter ? 'center' : ''} ${hintCells.has(i) ? 'hinted' : ''} ${i === cursorAt ? `cursor cursor-${cursor.dir}` : ''} ${i === dropAt ? 'drop-target' : ''}`;
         if (cell) {
-          btn.replaceChildren(letterTile(cell.l, { cls: fresh.has(i) ? 'fresh' : '', color: colorOf.get(cell.s) }));
+          btn.replaceChildren(letterTile(cell.l, { cls: fresh.has(i) ? 'fresh' : '', color: colorOf.get(cell.s), blank: cell.blank }));
         } else if (pending.has(i)) {
-          btn.replaceChildren(letterTile(pending.get(i), { cls: 'pending' }));
+          btn.replaceChildren(letterTile(pending.get(i).l, { cls: 'pending', blank: pending.get(i).blank }));
         } else if (isCenter) {
           btn.replaceChildren(pokeBall('ball cell-ball'));
         } else if (prem) {
@@ -268,6 +268,8 @@
         return el('li', { class: 'log-play' }, [sprite(entry.id, 'mini'), who, ` creó a ${R.DEX[entry.id - 1].name} `, el('b', { text: `+${entry.score}` })]);
       case 'exchange':
         return el('li', {}, ['🔄 ', who, ` cambió ${entry.count} ficha${entry.count === 1 ? '' : 's'}${entry.swapType ? ' y su ficha de tipo' : ''}`]);
+      case 'swap-one':
+        return el('li', {}, ['🔄 ', who, ' cambió 1 ficha sin perder el turno']);
       case 'hint':
         return el('li', {}, ['💡 ', who, ' pidió una pista (−5)']);
       default:
@@ -276,7 +278,7 @@
   }
 
   const END_REASON = {
-    options: 'No quedan dos Pokémon distintos que puedan jugarse con un mismo atril.',
+    options: 'No quedan tres Pokémon distintos que puedan jugarse con un mismo atril.',
     rounds: 'Se jugaron todas las rondas.',
     bag: 'Se vació la bolsa de fichas.',
     passes: 'Todos pasaron dos veces seguidas.',

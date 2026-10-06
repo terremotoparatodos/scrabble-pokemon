@@ -113,7 +113,11 @@ las cámaras, sin carteles repetidos sobre los personajes. Alrededor está el
 
 ## Reglas
 
-- **Atril:** 10 fichas de letra y 1 **ficha de tipo**.
+- **Atril:** 12 fichas de letra y 1 **ficha de tipo**.
+- **Comodín de letra ★:** la bolsa incluye 2. Representa cualquier letra de la
+  A a la Z, elegida al colocarlo; vale 0 puntos incluso al cruzarse con otras
+  palabras. La letra elegida queda fija hasta el fin de la partida. Al escribir
+  con el teclado, un comodín cubre automáticamente una letra que falte.
 - **Ficha de tipo recomendado:** puedes crear cualquier Pokémon. Si coincide
   con el tipo recomendado (cualquiera de sus dos tipos), el puntaje total de
   la jugada da **x2**, incluidos los multiplicadores del tablero y el bonus
@@ -130,17 +134,20 @@ las cámaras, sin carteles repetidos sobre los personajes. Alrededor está el
   casillas x2/x3 letra y x2/x3 palabra (solo las que se cubren ese turno),
   +20 por usar 7 fichas o más.
 - **Regla de oro:** al empezar cada turno, la bolsa garantiza que con las
-  fichas del jugador se puedan crear al menos 2 Pokémon nuevos y distintos en
+  fichas del jugador se puedan crear al menos 3 Pokémon nuevos y distintos en
   el tablero. Si no se puede, cambia las mínimas fichas necesarias (vuelven a
   la bolsa). El tipo recomendado coincide con al menos una opción disponible;
   se conserva cuando ya coincide, y cualquier otro tipo sigue siendo válido.
   El atril avisa cuando hubo ajuste. Bots y pistas comparan las jugadas con
   el bonus x2 incluido.
-- **Otras acciones:** cambiar fichas y/o la ficha de tipo (usa el turno),
+- **Cambiar 1:** cada jugador puede cambiar una sola ficha por ronda sin perder
+  su turno. Sólo cambia esa ficha, conserva las tres alternativas y el límite
+  queda guardado al recargar. Las pistas ya pagadas se actualizan sin cobrar otra.
+- **Otras acciones:** cambiar varias fichas y/o la ficha de tipo (usa el turno),
   pasar, o pedir una pista (−5 puntos: muestra un Pokémon posible).
 - **Fin:** al terminar las rondas elegidas, al vaciarse la bolsa (se termina
   la ronda), si todos pasan dos veces seguidas o cuando el tablero ya no permite
-  dos Pokémon distintos jugables con un mismo atril.
+  tres Pokémon distintos jugables con un mismo atril.
 
 ## Código
 

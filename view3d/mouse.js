@@ -68,7 +68,7 @@ export function createMouse(opts) {
     const src = press.tile;
     const proxy = opts.factory.make(src.letter);
     proxy.group.position.copy(src.group.position);
-    opts.factory.skin(proxy, src.letter, '', 'pending', src.top.rotation.z);
+    opts.factory.skin(proxy, src.letter, '', 'pending', src.top.rotation.z, src.blank);
     src.group.visible = false;
     drag = { proxy, source: press };
   }

@@ -189,7 +189,7 @@ export function createBoard3D(container, input) {
       });
       return { kind: 'play', seat: p.seat, cells, drawn: p.rackCount - (before - cells.length) };
     }
-    if (entry.kind === 'exchange' && entry.count > 0) return { kind: 'exchange', seat: p.seat, count: entry.count };
+    if ((entry.kind === 'exchange' || entry.kind === 'swap-one') && entry.count > 0) return { kind: 'exchange', seat: p.seat, count: entry.count };
     return null;
   }
 
@@ -227,7 +227,7 @@ export function createBoard3D(container, input) {
         // Las fichas de una jugada aparecen cuando llegan volando (racks.play).
         if (change && change.kind === 'play') tile.group.visible = false;
       }
-      factory.skin(tile, cell.l, colorOf.get(cell.s), fresh.has(i) ? 'fresh' : 'placed', angle);
+      factory.skin(tile, cell.l, colorOf.get(cell.s), fresh.has(i) ? 'fresh' : 'placed', angle, !!cell.blank);
     });
 
     // Fichas que quien mira está poniendo (flotan sobre su casilla)
@@ -244,7 +244,7 @@ export function createBoard3D(container, input) {
         tween(220, (t) => tile.group.scale.setScalar(0.4 + 0.6 * t), ease.outBack);
       }
       tile.group.userData.cell = { r: p.r, c: p.c };
-      factory.skin(tile, p.l, '', 'pending', angle);
+      factory.skin(tile, p.l, '', 'pending', angle, !!p.blank);
     }
 
     if (change && change.kind === 'play') racks.play(change.seat, change.cells, change.drawn, land);

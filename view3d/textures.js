@@ -103,8 +103,8 @@ const tileCache = new Map();
  * letter null: ficha boca abajo.
  * owner: color del jugador que la puso (franja de abajo).
  */
-export function tileTexture(letter, owner, state) {
-  const key = `${letter}|${owner || ''}|${state}`;
+export function tileTexture(letter, owner, state, blank = false) {
+  const key = `${letter}|${owner || ''}|${state}|${blank}`;
   if (tileCache.has(key)) return tileCache.get(key);
   const s = 128;
   const c = document.createElement('canvas');
@@ -143,9 +143,9 @@ export function tileTexture(letter, owner, state) {
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.font = '900 80px "Trebuchet MS", sans-serif';
-  ctx.fillText(letter, s * 0.46, s * 0.47);
+  ctx.fillText(letter === R.BLANK ? '★' : letter, s * 0.46, s * 0.47);
   ctx.font = '800 28px "Trebuchet MS", sans-serif';
-  ctx.fillText(String(R.LETTER_POINTS[letter]), s * 0.83, s * 0.78);
+  ctx.fillText(String(blank ? 0 : R.LETTER_POINTS[letter]), s * 0.83, s * 0.78);
   const tex = canvasTexture(c);
   tileCache.set(key, tex);
   return tex;

@@ -13,10 +13,12 @@
 
   const SIZE = 15;
   const CENTER = 7;
-  const RACK_SIZE = 10;
+  const RACK_SIZE = 12;
+  const MIN_OPTIONS = 3;
   const BIG_PLAY_TILES = 7;
   const BIG_PLAY_BONUS = 20;
   const ANY_TYPE = 'any';
+  const BLANK = '*';
 
   const TYPES = {
     normal: { es: 'Normal', color: '#9fa19f' },
@@ -42,6 +44,7 @@
 
   // Puntos según qué tan frecuente es la letra en los nombres de Pokémon.
   const LETTER_POINTS = {
+    [BLANK]: 0,
     A: 1, E: 1, O: 1, R: 1, I: 1, L: 1, N: 1, T: 1, S: 1,
     U: 2, C: 2, M: 2, D: 2, G: 2, P: 2,
     H: 3, B: 3, K: 3,
@@ -51,8 +54,9 @@
     Q: 10, J: 10,
   };
 
-  // Bolsa inicial (122 fichas), proporcional a la frecuencia de cada letra.
+  // Bolsa inicial: letras según su frecuencia y dos comodines de letra.
   const BAG_COUNTS = {
+    [BLANK]: 2,
     A: 12, E: 10, O: 10, R: 9, I: 9, L: 8, N: 7, T: 6, S: 6,
     U: 5, C: 4, M: 4, D: 4, G: 4, P: 4,
     H: 3, B: 3, K: 3,
@@ -125,6 +129,20 @@
 
   const rackPoints = (letters) => letters.reduce((sum, l) => sum + (LETTER_POINTS[l] || 0), 0);
 
+  /** Asigna fichas reales primero; los comodines cubren las letras faltantes. */
+  function assignRack(rack, placements) {
+    const free = rack.map((l, i) => ({ l, i }));
+    const tiles = [];
+    for (const { r, c, l } of placements) {
+      let at = free.findIndex((x) => x.l === l);
+      if (at < 0) at = free.findIndex((x) => x.l === BLANK);
+      if (at < 0) return null;
+      const tile = free.splice(at, 1)[0];
+      tiles.push({ r, c, i: tile.i, ...(tile.l === BLANK ? { l } : {}) });
+    }
+    return tiles;
+  }
+
   // ── Validación de una jugada ──
   const DIRS = { H: [0, 1], V: [1, 0] };
   const fail = (error) => ({ ok: false, error });
@@ -149,11 +167,11 @@
     return { word: cells.map((x) => x.l).join(''), cells };
   }
 
-  function scoreCells(cells, isNew) {
+  function scoreCells(cells, isNew, isBlank) {
     let sum = 0;
     let mult = 1;
     for (const { r, c, l } of cells) {
-      let pts = LETTER_POINTS[l] || 0;
+      let pts = isBlank(r, c) ? 0 : LETTER_POINTS[l] || 0;
       if (isNew(r, c)) {
         const p = PREMIUM[idx(r, c)];
         if (p === 'DL') pts *= 2;
@@ -174,15 +192,18 @@
   function validatePlay({ board, placements, type, used }) {
     if (!Array.isArray(placements) || placements.length === 0) return fail('Pon al menos una ficha en el tablero.');
     const fresh = new Map();
+    const blanks = new Set();
     for (const p of placements) {
       if (!Number.isInteger(p.r) || !Number.isInteger(p.c) || !inBounds(p.r, p.c)) return fail('Ficha fuera del tablero.');
       if (!LETTER_POINTS[p.l]) return fail('Ficha inválida.');
       if (board[idx(p.r, p.c)]) return fail('Esa casilla ya está ocupada.');
       if (fresh.has(idx(p.r, p.c))) return fail('Dos fichas en la misma casilla.');
       fresh.set(idx(p.r, p.c), p.l);
+      if (p.blank) blanks.add(idx(p.r, p.c));
     }
     const at = (r, c) => fresh.get(idx(r, c)) || (board[idx(r, c)] && board[idx(r, c)].l) || null;
     const isNew = (r, c) => fresh.has(idx(r, c));
+    const isBlank = (r, c) => blanks.has(idx(r, c)) || !!board[idx(r, c)]?.blank;
     const first = boardIsEmpty(board);
 
     const sameRow = placements.every((p) => p.r === placements[0].r);
@@ -222,7 +243,7 @@
       if (!isPokemon(w.word)) return fail(`También se forma «${w.word}», que no es un Pokémon.`);
     }
 
-    const words = [main, ...cross].map((w) => ({ word: w.word, cells: w.cells, score: scoreCells(w.cells, isNew) }));
+    const words = [main, ...cross].map((w) => ({ word: w.word, cells: w.cells, score: scoreCells(w.cells, isNew, isBlank) }));
     const bonus = placements.length >= BIG_PLAY_TILES ? BIG_PLAY_BONUS : 0;
     const baseScore = words.reduce((s, w) => s + w.score, 0) + bonus;
     const typeMultiplier = wordHasType(main.word, type) ? 2 : 1;
@@ -234,9 +255,11 @@
     SIZE,
     CENTER,
     RACK_SIZE,
+    MIN_OPTIONS,
     BIG_PLAY_TILES,
     BIG_PLAY_BONUS,
     ANY_TYPE,
+    BLANK,
     TYPES,
     TYPE_KEYS,
     LETTER_POINTS,
@@ -254,6 +277,7 @@
     boardIsEmpty,
     newBag,
     countLetters,
+    assignRack,
     rackPoints,
     validatePlay,
   };

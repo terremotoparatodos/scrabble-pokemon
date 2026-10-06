@@ -94,8 +94,7 @@
     const p = current();
     const best = M.bestMove(state.board, p.rack, p.type, state.used);
     if (!best) return act(p.seat, { type: 'pass' });
-    const free = p.rack.map((l, i) => ({ l, i }));
-    const tiles = best.place.map(({ r, c, l }) => ({ r, c, i: free.splice(free.findIndex((x) => x.l === l), 1)[0].i }));
+    const tiles = window.ScrabbleRules.assignRack(p.rack, best.place);
     const res = act(p.seat, { type: 'play', tiles });
     if (!res.ok) {
       console.warn('El bot no pudo jugar:', res.error);
@@ -219,7 +218,7 @@
     activeBoard().render(view, view.me >= 0 && !curtainUp(view) ? panel.boardExtra() : null);
   }
 
-  const turnKey = () => `${state.moveNo}:${state.turn}`;
+  const turnKey = () => `${state.round}:${state.turn}`;
   const localHumans = () => state.players.filter(isLocalHuman).length;
   const curtainUp = (view) => view.me >= 0 && localHumans() > 1 && curtainOpenFor !== turnKey();
 

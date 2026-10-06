@@ -1,14 +1,14 @@
 /*
  * Búsqueda de jugadas y la regla de oro: con las fichas de cada jugador
- * hay al menos dos Pokémon distintos que pueden crearse en el tablero.
+ * hay al menos tres Pokémon distintos que pueden crearse en el tablero.
  * El tipo recomendado sólo modifica el puntaje; nunca limita las opciones.
  *
  * - placements(): lugares del tablero donde entra cada Pokémon, sin mirar el
  *   atril (qué letras faltarían poner).
  * - findMoves(): de esos lugares, los que se pueden armar con el atril.
- * - ensurePlayable(): ajusta las fichas necesarias para tener dos alternativas
+ * - ensurePlayable(): ajusta las fichas necesarias para tener tres alternativas
  *   y recomienda un tipo que coincide con alguna. Las fichas que salen vuelven
- *   a la bolsa. Si el tablero ya no permite dos alternativas, la partida termina.
+ *   a la bolsa. Si el tablero ya no permite tres alternativas, la partida termina.
  *
  * Por simpleza, las jugadas que se buscan acá no forman palabras cruzadas
  * (las fichas nuevas no tocan otras de costado). El validador sí acepta
@@ -102,16 +102,23 @@
   /** Letras que faltan en el atril para cubrir `place`. */
   function missingLetters(rack, place) {
     const have = R.countLetters(rack);
+    let blanks = have[R.BLANK] || 0;
     const missing = [];
     for (const { l } of place) {
       if (have[l]) have[l]--;
+      else if (blanks) blanks--;
       else missing.push(l);
     }
     return missing;
   }
 
   function findMoves(board, rack, type, used) {
-    return placements(board, wordsOfType(R.ANY_TYPE, used)).filter((p) => missingLetters(rack, p.place).length === 0);
+    return placements(board, wordsOfType(R.ANY_TYPE, used))
+      .filter((p) => missingLetters(rack, p.place).length === 0)
+      .map((p) => {
+        const tiles = R.assignRack(rack, p.place);
+        return { ...p, place: p.place.map((x, k) => ({ ...x, blank: rack[tiles[k].i] === R.BLANK })) };
+      });
   }
 
   function scoreOf(board, move, type, used) {
@@ -144,12 +151,12 @@
     return pick(types, rng);
   }
 
-  /** Dos nombres distintos, cada uno jugable por separado con el mismo atril. */
+  /** Tres nombres distintos, cada uno jugable por separado con el mismo atril. */
   function ensurePlayable({ board, rack, bag, type, used, rng }) {
     const random = rng || Math.random;
     const options = placements(board, wordsOfType(R.ANY_TYPE, used));
     const ready = options.filter((p) => missingLetters(rack, p.place).length === 0);
-    if (new Set(ready.map((m) => m.word)).size >= 2) {
+    if (new Set(ready.map((m) => m.word)).size >= R.MIN_OPTIONS) {
       const recommended = recommendType(ready, type, random);
       return { type: recommended, changed: false, typeChanged: recommended !== type, move: ready[0] };
     }
@@ -164,41 +171,52 @@
       seen.add(key);
       candidates.push({ move, needed: R.countLetters(letters), missing: missingLetters(rack, move.place).length });
     }
-    candidates.sort((a, b) => a.missing - b.missing);
+    candidates.sort((a, b) => a.missing - b.missing || a.move.place.length - b.move.place.length);
     const have = R.countLetters(rack);
     let best = null;
     let ties = 0;
-    for (let i = 0; i < candidates.length; i++) {
-      const a = candidates[i];
-      if (best && a.missing > best.missing.length) break;
-      for (let j = i + 1; j < candidates.length; j++) {
-        const b = candidates[j];
-        if (best && b.missing > best.missing.length) break;
-        if (a.move.word === b.move.word) continue;
-        // Son alternativas: una letra compartida sirve para ambas jugadas.
-        // Por eso se toma el máximo por letra, no la suma de las dos palabras.
-        const needed = { ...a.needed };
-        for (const l of Object.keys(b.needed)) needed[l] = Math.max(needed[l] || 0, b.needed[l]);
+    function search(start, chosen, required) {
+      for (let j = start; j < candidates.length; j++) {
+        const candidate = candidates[j];
+        if (best && candidate.missing > best.missing.length) break;
+        if (chosen.some((m) => m.word === candidate.move.word)) continue;
+        // Son alternativas: las letras compartidas sirven para todas.
+        const needed = { ...required };
+        for (const [l, n] of Object.entries(candidate.needed)) needed[l] = Math.max(needed[l] || 0, n);
         if (Object.values(needed).reduce((sum, n) => sum + n, 0) > RACK_SIZE) continue;
+        let blanks = have[R.BLANK] || 0;
         const missing = [];
         for (const [l, n] of Object.entries(needed)) {
-          for (let k = have[l] || 0; k < n; k++) missing.push(l);
+          let deficit = Math.max(0, n - (have[l] || 0));
+          const covered = Math.min(blanks, deficit);
+          blanks -= covered;
+          deficit -= covered;
+          for (let k = 0; k < deficit; k++) missing.push(l);
         }
-        const keepsType = R.wordHasType(a.move.word, type) || R.wordHasType(b.move.word, type);
+        if (best && missing.length > best.missing.length) continue;
+        const moves = [...chosen, candidate.move];
+        if (moves.length < R.MIN_OPTIONS) {
+          search(j + 1, moves, needed);
+          continue;
+        }
+        const keepsType = moves.some((m) => R.wordHasType(m.word, type));
         if (!best || missing.length < best.missing.length ||
             (missing.length === best.missing.length && keepsType && !best.keepsType)) {
-          best = { moves: [a.move, b.move], needed, missing, keepsType };
+          best = { moves, needed, missing, keepsType };
           ties = 1;
         } else if (missing.length === best.missing.length && keepsType === best.keepsType && random() < 1 / ++ties) {
-          best = { moves: [a.move, b.move], needed, missing, keepsType };
+          best = { moves, needed, missing, keepsType };
         }
       }
     }
+    search(0, [], {});
     if (!best) return { type, changed: false, typeChanged: false, move: null, reason: options.length ? 'options' : 'board' };
 
-    // Conserva las letras de ambas alternativas; devuelve sólo las sobrantes.
+    // Conserva las letras de las tres alternativas; devuelve sólo las sobrantes.
     const { missing } = best;
     const needed = { ...best.needed };
+    const blankNeeded = Object.entries(needed).reduce((sum, [l, n]) => sum + Math.max(0, n - (have[l] || 0)), 0);
+    needed[R.BLANK] = Math.min(have[R.BLANK] || 0, blankNeeded);
     const spare = [];
     rack.forEach((l, i) => {
       if (needed[l]) needed[l]--;

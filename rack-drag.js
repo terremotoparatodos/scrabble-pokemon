@@ -116,6 +116,9 @@
         return;
       }
       suppressClick = true;
+      // Sólo bloquea el clic generado por este arrastre, no el siguiente clic
+      // del jugador (por ejemplo, después de elegir la letra de un comodín).
+      setTimeout(() => { suppressClick = false; }, 0);
       const { i } = press;
       const pos = rackPosition(ev.clientX, ev.clientY);
       const target = opts.getTarget();

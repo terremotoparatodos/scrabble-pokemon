@@ -127,7 +127,7 @@ test('rechaza palabras sueltas, con huecos o que no son Pokémon', () => {
 
 function assertOptions(board, rack, type, used) {
   const moves = M.findMoves(board, rack, type, used);
-  assert.ok(new Set(moves.map((m) => m.word)).size >= 2, 'debe haber dos nombres distintos');
+  assert.ok(new Set(moves.map((m) => m.word)).size >= R.MIN_OPTIONS, 'debe haber tres nombres distintos');
   assert.ok(moves.some((m) => R.wordHasType(m.word, type)), 'el x2 debe tener una opción disponible');
   for (const m of moves) {
     assert.equal(R.validatePlay({ board, placements: m.place, type, used }).ok, true, m.word);
@@ -135,21 +135,20 @@ function assertOptions(board, rack, type, used) {
   return moves;
 }
 
-test('regresión: la mano SLEIECRNLE con Fantasma pasa a dos opciones y x2 posible', () => {
+test('regresión: la mano SLEIECRNLE con Fantasma pasa a tres opciones y x2 posible', () => {
   const board = R.emptyBoard();
   const rack = 'SLEIECRNLE'.split('');
   assert.deepEqual(M.findMoves(board, rack, 'ghost', []).map((m) => m.word), ['SEEL']);
   const result = M.ensurePlayable({ board, rack, bag: R.newBag(), type: 'ghost', used: [], rng: seeded(1) });
   assert.equal(result.changed, true);
-  assert.equal(result.typeChanged, true);
   assert.equal(rack.length, R.RACK_SIZE);
   assertOptions(board, rack, result.type, []);
-  // Una sola sustitución ya permite SEEL y CELEBI: no deben cambiarse más fichas.
+  // Dos letras adicionales alcanzan: se conservan las diez fichas originales.
   const missing = M.missingLetters('SLEIECRNLE'.split(''), rack.map((l) => ({l})));
-  assert.equal(missing.length, 1);
+  assert.equal(missing.length, 2);
 });
 
-test('dos opciones existentes conservan el atril; sólo se corrige el tipo imposible', () => {
+test('tres opciones existentes conservan el atril; sólo se corrige el tipo imposible', () => {
   for (const type of ['ghost', 'psychic', 'electric', R.ANY_TYPE]) {
     const board = R.emptyBoard();
     const rack = 'PIKACHUMEW'.split('');
@@ -166,7 +165,7 @@ test('dos opciones existentes conservan el atril; sólo se corrige el tipo impos
   }
 });
 
-test('regla de oro: un atril imposible se ajusta hasta tener dos Pokémon distintos', () => {
+test('regla de oro: un atril imposible se ajusta hasta tener tres Pokémon distintos', () => {
   const rng = seeded(7);
   const board = R.emptyBoard();
   put(board, 'PIKACHU', 7, 4, 'H');
@@ -178,7 +177,7 @@ test('regla de oro: un atril imposible se ajusta hasta tener dos Pokémon distin
   assertOptions(board, rack, res.type, ['PIKACHU']);
 });
 
-test('varias posiciones de un solo Pokémon no cuentan como dos alternativas', () => {
+test('varias posiciones de un solo Pokémon no cuentan como tres alternativas', () => {
   const board = R.emptyBoard();
   put(board, 'SEEL', 7, 5, 'H');
   const used = R.WORDS.filter((w) => w !== 'MEW');
@@ -191,7 +190,7 @@ test('varias posiciones de un solo Pokémon no cuentan como dos alternativas', (
   assert.equal(result.reason, 'options');
 });
 
-test('al agotarse la bolsa, un atril corto sigue teniendo dos alternativas', () => {
+test('al agotarse la bolsa, un atril corto sigue teniendo tres alternativas', () => {
   const board = R.emptyBoard();
   put(board, 'SEEL', 7, 5, 'H');
   const rack = ['Q'];
@@ -199,6 +198,24 @@ test('al agotarse la bolsa, un atril corto sigue teniendo dos alternativas', () 
   assert.ok(result.move);
   assert.ok(rack.length <= R.RACK_SIZE);
   assertOptions(board, rack, result.type, ['SEEL']);
+});
+
+test('dos nombres distintos no alcanzan la nueva garantía de tres', () => {
+  const used = R.WORDS.filter((w) => !['MEW','MUK'].includes(w));
+  const result = M.ensurePlayable({board:R.emptyBoard(),rack:'MEWMUKXXXXXX'.split(''),bag:R.newBag(),type:'psychic',used,rng:seeded(1)});
+  assert.equal(result.move,null);
+  assert.equal(result.reason,'options');
+});
+
+test('el atril de doce permite nombres largos y conserva el límite de tres', () => {
+  assert.equal(R.RACK_SIZE,12);
+  assert.equal(R.MIN_OPTIONS,3);
+  const long = R.WORDS.find((w) => w.length===12);
+  assert.ok(long);
+  const moves = M.findMoves(R.emptyBoard(),long.split(''),R.ANY_TYPE,[]);
+  const move = moves.find((m) => m.word===long);
+  assert.ok(move);
+  assert.equal(R.validatePlay({board:R.emptyBoard(),placements:move.place,type:R.ANY_TYPE,used:[]}).ok,true);
 });
 
 test('restaurar una partida aplica la garantía y conserva la pista pagada', () => {
@@ -221,7 +238,7 @@ test('restaurar una partida aplica la garantía y conserva la pista pagada', () 
   assert.equal(JSON.stringify(state), snapshot);
 });
 
-test('partidas completas con bots: siempre hay dos Pokémon y un x2 disponible', () => {
+test('partidas completas con bots: siempre hay tres Pokémon y un x2 disponible', () => {
   for (let seed = 1; seed <= 12; seed++) {
     const rng = seeded(seed);
     const n = 2 + (seed % 3);
@@ -229,14 +246,14 @@ test('partidas completas con bots: siempre hay dos Pokémon y un x2 disponible',
     const state = G.createGame({ players, rounds: 0 }, rng);
     let guard = 0;
     while (state.phase === 'play' && guard++ < 400) {
+      const blanks = state.bag.filter((l) => l === R.BLANK).length
+        + state.players.reduce((n, p) => n + p.rack.filter((l) => l === R.BLANK).length, 0)
+        + state.board.filter((cell) => cell?.blank).length;
+      assert.equal(blanks, 2, 'los dos comodines se conservan entre bolsa, atriles y tablero');
       const p = state.players[state.turn];
       assertOptions(state.board, p.rack, p.type, state.used);
       const best = M.bestMove(state.board, p.rack, p.type, state.used);
-      const free = p.rack.map((l, i) => ({ l, i }));
-      const tiles = best.place.map(({ r, c, l }) => {
-        const at = free.findIndex((x) => x.l === l);
-        return { r, c, i: free.splice(at, 1)[0].i };
-      });
+      const tiles = R.assignRack(p.rack, best.place);
       const res = G.act(state, state.turn, { type: 'play', tiles }, rng);
       assert.equal(res.ok, true, `semilla ${seed}: ${res.error}`);
     }
@@ -269,8 +286,7 @@ test('capturas: puntajes por Pokémon, persistencia y partidas anteriores', () =
     const player = state.turn;
     const p = state.players[player];
     const best = M.bestMove(state.board, p.rack, p.type, state.used);
-    const free = p.rack.map((l, i) => ({ l, i }));
-    const tiles = best.place.map(({ r, c, l }) => ({ r, c, i: free.splice(free.findIndex((x) => x.l === l), 1)[0].i }));
+    const tiles = R.assignRack(p.rack, best.place);
     const res = G.act(state, player, { type: 'play', tiles }, rng);
     assert.equal(res.ok, true);
     return { id: res.move.id, score: res.move.score, n: state.moveNo };
@@ -300,6 +316,134 @@ test('la duración elegida termina al completar la ronda', () => {
   G.act(state, 1, { type: 'pass' }, rng);
   assert.equal(state.phase, 'over');
   assert.equal(state.endReason, 'rounds');
+});
+
+test('comodines: dos en la bolsa, cualquier letra y prioridad a fichas reales', () => {
+  assert.equal(R.newBag().filter((l) => l === R.BLANK).length, 2);
+  assert.equal(R.LETTER_POINTS[R.BLANK], 0);
+  const place = [...'MEW'].map((l, k) => ({r:7, c:6+k, l}));
+  assert.deepEqual(R.assignRack(['*', 'M', 'W'], place), [
+    {r:7,c:6,i:1}, {r:7,c:7,i:0,l:'E'}, {r:7,c:8,i:2},
+  ]);
+  assert.equal(R.assignRack(['*', 'X'], place), null);
+  const rack = 'PIKACH*MEW'.split('');
+  const moves = assertOptions(R.emptyBoard(), rack, 'electric', []);
+  assert.ok(moves.some((m) => m.word === 'PIKACHU'));
+  const result = M.ensurePlayable({board:R.emptyBoard(), rack, bag:R.newBag(), type:'electric', used:[], rng:seeded(2)});
+  assert.equal(result.changed, false);
+  assert.ok(rack.includes(R.BLANK));
+});
+
+function fixtureGame(rng) {
+  return G.createGame({players:[0,1].map((seat) => ({seat,name:`J${seat}`,color:'#000',avatar:25})),rounds:10}, rng);
+}
+
+test('comodín: elección obligatoria, cero puntos y letra fija en cruces y guardado', () => {
+  const rng = seeded(12);
+  const state = fixtureGame(rng);
+  const p = state.players[0];
+  p.rack = 'M*WXXXXXXX'.split('');
+  p.type = 'psychic';
+  const tiles = [{r:7,c:6,i:0},{r:7,c:7,i:1,l:'E'},{r:7,c:8,i:2}];
+  const snapshot = JSON.stringify(state);
+  for (const l of [undefined,'','AB','*','1']) {
+    const bad = tiles.map((t) => t.i === 1 ? {...t,l} : t);
+    assert.equal(G.act(state,0,{type:'play',tiles:bad},rng).ok,false);
+    assert.equal(JSON.stringify(state),snapshot);
+  }
+  const spoof = tiles.map((t) => t.i === 0 ? {...t,l:'E'} : t);
+  assert.equal(G.act(state,0,{type:'play',tiles:spoof},rng).ok,false);
+  const result = G.act(state,0,{type:'play',tiles},rng);
+  assert.equal(result.ok,true);
+  assert.equal(result.move.baseScore,12);
+  assert.equal(result.move.score,24);
+  const saved = JSON.parse(JSON.stringify(state));
+  assert.equal(saved.board[R.idx(7,7)].l,'E');
+  assert.equal(saved.board[R.idx(7,7)].blank,true);
+  const cross = [{r:6,c:7,l:'S'},{r:8,c:7,l:'E'},{r:9,c:7,l:'L'}];
+  const zero = R.validatePlay({board:saved.board,placements:cross,type:'water',used:['MEW']});
+  assert.equal(zero.ok,true);
+  assert.equal(zero.word,'SEEL');
+  const normalBoard = JSON.parse(JSON.stringify(saved.board));
+  delete normalBoard[R.idx(7,7)].blank;
+  const normal = R.validatePlay({board:normalBoard,placements:cross,type:'water',used:['MEW']});
+  assert.equal(normal.baseScore-zero.baseScore,1);
+});
+
+test('cambiar 1: exactamente una ficha, sin perder turno, una vez por jugador y ronda', () => {
+  const rng = seeded(20);
+  const state = fixtureGame(rng);
+  state.players[0].rack = 'PIKACHUMEW'.split('');
+  state.players[0].type = 'electric';
+  state.bag = R.newBag();
+  const before = state.players[0].rack.slice();
+  const bagCount = state.bag.length;
+  const total = R.countLetters([...state.bag,...before]);
+  for (const indices of [[],[0,1],[-1],[10],[0.5]]) {
+    assert.equal(G.act(state,0,{type:'swap-one',indices},rng).ok,false);
+  }
+  assert.equal(G.act(state,1,{type:'swap-one',indices:[0]},rng).ok,false);
+  assert.equal(G.act(state,0,{type:'hint'},rng).ok,true);
+  const score = state.players[0].score;
+  assert.equal(G.act(state,0,{type:'swap-one',indices:[2]},rng).ok,true);
+  assert.equal(state.turn,0);
+  assert.equal(state.round,1);
+  assert.equal(state.bag.length,bagCount);
+  assert.equal(state.players[0].rack.filter((l,i)=>l!==before[i]).length,1);
+  assert.deepEqual(R.countLetters([...state.bag,...state.players[0].rack]),total);
+  assert.equal(state.players[0].score,score);
+  const moves = assertOptions(state.board,state.players[0].rack,state.players[0].type,state.used);
+  assert.ok(moves.some((m)=>m.word===state.hint.word));
+  assert.equal(G.publicView(state,0).players[0].singleSwapAvailable,false);
+  const saved = JSON.parse(JSON.stringify(state));
+  assert.equal(G.act(saved,0,{type:'swap-one',indices:[0]},rng).ok,false);
+  assert.equal(G.act(state,0,{type:'pass'},rng).ok,true);
+  assert.equal(G.publicView(state,1).players[1].singleSwapAvailable,true);
+  assert.equal(G.act(state,1,{type:'swap-one',indices:[0]},rng).ok,true);
+  assert.equal(G.act(state,1,{type:'pass'},rng).ok,true);
+  assert.equal(state.round,2);
+  assert.equal(G.publicView(state,0).players[0].singleSwapAvailable,true);
+});
+
+test('cambiar 1 no consume el beneficio si no hay reemplazo válido o bolsa vacía', () => {
+  const rng = seeded(20);
+  const state = fixtureGame(rng);
+  state.players[0].rack = 'PIKACHUMEW'.split('');
+  state.bag = ['K'];
+  const snapshot = JSON.stringify(state);
+  assert.equal(G.act(state,0,{type:'swap-one',indices:[2]},rng).ok,false);
+  assert.equal(JSON.stringify(state),snapshot);
+  state.bag = [];
+  assert.equal(G.act(state,0,{type:'swap-one',indices:[0]},rng).ok,false);
+  assert.equal(state.players[0].singleSwapRound,null);
+});
+
+test('partidas antiguas reciben dos comodines una sola vez al actualizar', () => {
+  const rng = seeded(9);
+  const state = fixtureGame(rng);
+  state.bag = state.bag.filter((l)=>l!==R.BLANK);
+  state.players.forEach((p)=>{p.rack=p.rack.map((l)=>l===R.BLANK?'E':l);delete p.singleSwapRound;});
+  state.turnPolicyVersion = 2;
+  assert.equal(G.upgradeTurn(state,rng),true);
+  const count = () => state.bag.filter((l)=>l===R.BLANK).length + state.players.reduce((n,p)=>n+p.rack.filter((l)=>l===R.BLANK).length,0);
+  assert.equal(count(),2);
+  assert.equal(G.upgradeTurn(state,rng),false);
+  assert.equal(count(),2);
+  assert.equal(G.publicView(state,0).players[0].singleSwapAvailable,true);
+});
+
+test('partidas de diez fichas se amplían sin perder puntos ni el cambio usado', () => {
+  const rng = seeded(10);
+  const state = fixtureGame(rng);
+  state.players.forEach((p)=>{state.bag.push(...p.rack.splice(10));});
+  state.players[0].score=123;
+  state.players[0].singleSwapRound=state.round;
+  state.turnPolicyVersion=3;
+  assert.equal(G.upgradeTurn(state,rng),true);
+  assert.ok(state.players.every((p)=>p.rack.length===12));
+  assert.equal(state.players[0].score,123);
+  assert.equal(G.publicView(state,0).players[0].singleSwapAvailable,false);
+  assertOptions(state.board,state.players[0].rack,state.players[0].type,state.used);
 });
 
 console.log(`✓ ${passed} pruebas`);
