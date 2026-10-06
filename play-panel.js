@@ -33,7 +33,6 @@
     let exchange = null; // { idx:Set, type:bool } en modo cambio
     let deal = false; // atril nuevo: las fichas entran repartidas
     let chooseBlank = null;
-    let shuffleNo = 0;
     const blankPicker = el('dialog', { class: 'modal card blank-picker', attrs: { 'aria-labelledby': 'blankPickerTitle' } }, [
       el('h2', { text: '★ Comodín de letra', attrs: { id: 'blankPickerTitle' } }),
       el('p', { text: 'Elegí la letra que representará. Esta ficha vale 0 puntos.' }),
@@ -208,12 +207,12 @@
     }
 
     function shuffle() {
-      shuffleNo++;
       for (let i = order.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [order[i], order[j]] = [order[j], order[i]];
       }
-      window.GameAudio?.play('exchange');
+      window.GameAudio?.play('shuffle');
+      if (view.phase === 'play') opts.onSound?.('shuffle');
       changed();
     }
 
@@ -380,7 +379,6 @@
         rack: order.filter((i) => i < rack().length).map((i) => ({ i, l: rack()[i], used: used.has(i), selected: selected === i })),
         exchange: exchange ? { indices: [...exchange.idx], type: exchange.type, single: !!exchange.single } : null,
         choosingBlank: blankPicker.open,
-        shuffleNo,
         editable: canEdit(),
       };
     }

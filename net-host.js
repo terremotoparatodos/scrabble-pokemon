@@ -188,6 +188,9 @@
       case 'preview':
         if (!conn.spectator && conn.seat != null && seatConn[conn.seat] === conn) Game.receivePreview(conn.seat, msg.preview);
         return;
+      case 'sound':
+        if (!conn.spectator && conn.seat != null && seatConn[conn.seat] === conn) Game.emitSound(conn.seat, msg.effect);
+        return;
       case 'act': {
         if (conn.spectator) return reply(conn, { t: 'error', msg: 'La vista OBS solo permite observar.' });
         if (conn.seat == null || seatConn[conn.seat] !== conn) return reply(conn, { t: 'error', msg: 'Primero elige tu asiento.' });
@@ -321,6 +324,9 @@
   Game.onPreviewUpdate(() => {
     const msg = { t: 'preview', preview: Game.presentationView() };
     for (const conn of conns) if (conn.spectator) reply(conn, msg);
+  });
+  Game.onSound((sound) => {
+    for (const conn of conns) if (conn.spectator) reply(conn, { t: 'sound', ...sound });
   });
   Setup.onChange(() => {
     renderPanels();

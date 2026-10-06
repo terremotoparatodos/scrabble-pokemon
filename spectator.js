@@ -119,7 +119,6 @@
     if (draft && audibleDraft?.key === draft.key) {
       const previous = new Set(audibleDraft.pending.map((t) => t.i));
       draft.pending.filter((t) => !previous.has(t.i)).forEach((_, i) => setTimeout(() => audio.play('tile'), i * 45));
-      if (draft.shuffleNo > (audibleDraft.shuffleNo || 0)) audio.play('exchange');
     }
     audibleDraft = draft;
     safeArea.schedule();
@@ -171,6 +170,7 @@
         last = msg; status(''); render();
       }
       else if (msg.t === 'preview' && last?.game && msg.preview?.key === last.game.liveKey) { last.preview = msg.preview; drawBoard(); }
+      else if (msg.t === 'sound' && last?.game?.phase === 'play' && msg.effect === 'shuffle' && last.game.players.some((p) => p.seat === msg.seat)) audio.play('shuffle');
     });
     c.on('close', () => { if (conn === c) { conn = null; status('Reconectando con la sala…'); retryLater(); } });
     c.on('error', () => {

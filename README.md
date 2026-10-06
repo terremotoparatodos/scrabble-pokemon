@@ -97,7 +97,9 @@ Muestra los puntajes, el turno, el tablero 3D
 (con alternativa 2D si no hay WebGL) y las tarjetas de los Pokémon creados.
 Se actualiza con cada jugada y reconecta automáticamente. No ocupa un
 asiento ni permite jugar. Mantén abierta la pantalla principal. La emisión
-incluye los sonidos de fichas, pistas, cambios, turnos y capturas. En OBS,
+incluye los sonidos de fichas, pistas, cambios, turnos y capturas.
+**Mezclar** se escucha desde cualquier jugador conectado, incluso mientras
+espera su turno; su sonido no depende del atril que sigue la emisión. En OBS,
 habilita **Controlar audio vía OBS** en la fuente de navegador;
 en un navegador que bloquee el audio automático, pulsa **Activar sonido**.
 

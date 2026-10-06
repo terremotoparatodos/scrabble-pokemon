@@ -14,14 +14,16 @@
  *   { t:'act', a:'exchange', indices, swapType }
  *   { t:'act', a:'pass' } · { t:'act', a:'hint' }
  *   { t:'ping' }                              latido (cada PING_MS)
- *   { t:'spectate' }                          vista OBS sin asiento ni atriles privados
+ *   { t:'spectate' }                          vista OBS sin asiento, sigue el atril del turno
  *   { t:'preview', preview }                 jugada en preparación y cámara del jugador en turno
+ *   { t:'sound', effect:'shuffle' }          sonido de Mezclar, también fuera del turno
  *
  * Anfitrión → celular
  *   { t:'state', room, you, lobby, game }     foto tras cada cambio; `game` solo
  *                                             incluye el atril de ese asiento
  *   { t:'joined', seat } · { t:'kicked' } · { t:'error', msg } · { t:'pong' }
  *   { t:'preview', preview }                 solo a OBS: borrador, orden y selección del atril validados
+ *   { t:'sound', seat, effect:'shuffle' }    solo a OBS: efecto de un jugador conectado
  */
 (function () {
   'use strict';

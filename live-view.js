@@ -11,7 +11,7 @@
   }
 
   function pack(view, extra, view3d, camera) {
-    return { key: view.liveKey, pending: extra.pending || [], cursor: extra.cursor || null, rack: extra.rack || null, exchange: extra.exchange || null, choosingBlank: !!extra.choosingBlank, shuffleNo: extra.shuffleNo || 0, view3d: !!view3d, camera: camera || null };
+    return { key: view.liveKey, pending: extra.pending || [], cursor: extra.cursor || null, rack: extra.rack || null, exchange: extra.exchange || null, choosingBlank: !!extra.choosingBlank, view3d: !!view3d, camera: camera || null };
   }
 
   function clean(state, seat, input, key) {
@@ -39,15 +39,12 @@
     const order = input.rack || p.rack.map((_, i) => ({ i }));
     if (!Array.isArray(order) || order.length !== p.rack.length || new Set(order.map((t) => t?.i)).size !== p.rack.length || order.some((t) => !t || !Number.isInteger(t.i) || t.i < 0 || t.i >= p.rack.length)) return null;
     const exchange = input.exchange;
-    const shuffleNo = input.shuffleNo ?? 0;
-    if (!Number.isSafeInteger(shuffleNo) || shuffleNo < 0) return null;
     if (exchange && (!Array.isArray(exchange.indices) || exchange.indices.length > p.rack.length || new Set(exchange.indices).size !== exchange.indices.length || exchange.indices.some((i) => !Number.isInteger(i) || i < 0 || i >= p.rack.length) || typeof exchange.single !== 'boolean' || typeof exchange.type !== 'boolean' || (exchange.single && (exchange.indices.length > 1 || exchange.type)))) return null;
     return {
       key, seat, pending,
       rack: order.map((t) => ({ i: t.i, l: p.rack[t.i], used: indices.has(t.i), selected: !!t.selected })),
       exchange: exchange ? { indices: [...exchange.indices], single: exchange.single, type: exchange.type } : null,
       choosingBlank: !!input.choosingBlank,
-      shuffleNo,
       cursor: cursor ? { r: cursor.r, c: cursor.c, dir: cursor.dir } : null,
       view3d: input.view3d,
       camera: camera ? { alt: camera.alt, yaw: camera.yaw, pitch: camera.pitch, zoom: camera.zoom, pan: { x: camera.pan.x, z: camera.pan.z } } : null,

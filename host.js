@@ -38,6 +38,7 @@
   let curtainOpenFor = null; // clave del turno cuya cortina ya se levantó
   const listeners = [];
   const previewListeners = [];
+  const soundListeners = [];
   let liveKey = Math.random().toString(36).slice(2);
   let livePreview = null;
   let previewSignature = '';
@@ -140,6 +141,7 @@
       if (!res.ok) toast(`✗ ${res.error}`);
     },
     onChange: () => { renderBoard(); publishLocalView(); },
+    onSound: (effect) => { if (state && isLocalHuman(current())) emitSound(current().seat, effect); },
     getDropTarget: () => activeBoard(),
   });
 
@@ -194,6 +196,14 @@
     livePreview = null;
     previewSignature = '';
     previewListeners.forEach((fn) => fn());
+  }
+
+  // Mezclar está disponible fuera del turno: su sonido no depende del borrador.
+  function emitSound(seat, effect) {
+    const p = state?.players.find((p) => p.seat === seat);
+    if (state?.phase !== 'play' || !p || p.bot || effect !== 'shuffle') return false;
+    soundListeners.forEach((fn) => fn({ seat, effect }));
+    return true;
   }
 
   // ── Vista 3D (view3d/, módulo que llega después; ver «board3d-ready») ──
@@ -473,6 +483,8 @@
     receivePreview,
     clearPreview,
     onPreviewUpdate: (fn) => previewListeners.push(fn),
+    emitSound,
+    onSound: (fn) => soundListeners.push(fn),
     setRemoteSeats(fn) {
       isRemote = fn;
       if (state) render();

@@ -59,6 +59,7 @@
       case 'capture': melody([523, 659, 784, 1047, 1319], 0.085, 0.32); break;
       case 'hint': melody([784, 1047], 0.12, 0.25, 'sine'); break;
       case 'swap-one':
+      case 'shuffle':
       case 'exchange': melody([440, 554, 659], 0.075, 0.15); break;
       case 'pass': melody([440, 330], 0.09, 0.15); break;
       case 'win': melody([523, 659, 784, 1047, 784, 1047], 0.14, 0.4); break;
