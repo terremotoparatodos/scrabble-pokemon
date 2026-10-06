@@ -16,6 +16,29 @@
   // El audio sale de la pantalla principal, para que OBS no lo duplique.
   window.GameAudio = { play() {}, observe() {} };
   const board = BV.createBoard($('boardWrap'), () => {});
+  // El fondo conserva el diseño original, con recortes solo en las cámaras.
+  let backdropQueued = false;
+  const backdropObserver = new ResizeObserver(scheduleBackdrop);
+  function scheduleBackdrop() {
+    if (backdropQueued) return;
+    backdropQueued = true;
+    requestAnimationFrame(() => {
+      backdropQueued = false;
+      const w = innerWidth;
+      const h = innerHeight;
+      let path = `M0 0H${w}V${h}H0Z`;
+      for (const frame of document.querySelectorAll('.cam-frame')) {
+        const b = frame.getBoundingClientRect();
+        if (!b.width || !b.height) continue;
+        const style = getComputedStyle(frame.parentElement);
+        const r = Math.max(0, Math.min(b.width / 2, b.height / 2, parseFloat(style.borderTopLeftRadius) - parseFloat(style.borderLeftWidth)));
+        path += ` M${b.left + r} ${b.top}H${b.right - r}Q${b.right} ${b.top} ${b.right} ${b.top + r}V${b.bottom}H${b.left}V${b.top + r}Q${b.left} ${b.top} ${b.left + r} ${b.top}Z`;
+      }
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}"><path fill="white" fill-rule="evenodd" d="${path}"/></svg>`;
+      document.body.style.maskImage = `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
+    });
+  }
+  window.addEventListener('resize', scheduleBackdrop);
   const safeArea = window.GameHud.watchSafeArea({ area: $('playArea'), top: $('hudTop'), bottom: $('hudBottom'), onChange(rect) {
     safeRect = rect;
     window.GameHud.placeBoard2d($('boardFrame'), rect);
@@ -41,8 +64,11 @@
     const g = last?.game;
     $('screenGame').hidden = !g;
     $('spectatorWait').hidden = !!g;
-    if (!g) { shownMove = null; return; }
+    if (!g) { shownMove = null; scheduleBackdrop(); return; }
     window.GameCams.render(g, (seat) => !!last.lobby[seat]?.connected, { spectator: true });
+    backdropObserver.disconnect();
+    document.querySelectorAll('.cam-frame').forEach((frame) => backdropObserver.observe(frame));
+    scheduleBackdrop();
     const round = g.rounds ? `Ronda ${g.round}/${g.rounds}` : `Ronda ${g.round}`;
     const meta = el('span', { class: 'hud-meta', text: `${round} · 🎒 ${g.bagCount}` });
     const p = g.players[g.turn];
@@ -132,5 +158,6 @@
   window.addEventListener('beforeunload', () => { clearTimeout(retryTimer); if (peer) peer.destroy(); });
   $('spectatorCodeForm').hidden = !!code;
   apply3d();
+  scheduleBackdrop();
   if (code) connect();
 })();

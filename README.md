@@ -88,10 +88,11 @@ cambiar también el tipo, marca la casilla dentro de «Cambiar».
 2. Pulsa **Copiar OBS** y pega el enlace en una fuente **Navegador** de OBS
    (por ejemplo, con tamaño **1920 × 1080**).
 3. Coloca las fuentes de tus cámaras debajo de esa fuente: los interiores
-   de los marcos son transparentes, sin croma.
+   de los marcos son transparentes, sin croma. El resto de la pantalla
+   conserva el fondo original y es opaco.
 
-La vista `spectator.html?sala=CODIGO` muestra las fichas de todos los
-jugadores debajo de cada cámara, los puntajes, el turno, el tablero 3D
+La vista `spectator.html?sala=CODIGO` usa el espacio de los atriles para
+cámaras más altas. Muestra los puntajes, el turno, el tablero 3D
 (con alternativa 2D si no hay WebGL) y las tarjetas de los Pokémon creados.
 Se actualiza con cada jugada y reconecta automáticamente. No ocupa un
 asiento ni permite jugar. Mantén abierta la pantalla principal. El audio

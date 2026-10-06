@@ -4,14 +4,14 @@
    ═══════════════════════════════════════════════════════════ */
 
 /* ───────── Fondo: cielo con Poké Balls que se deslizan ───────── */
-body {
+body, .spectator-backdrop {
   background:
     radial-gradient(circle at 15% 0%, rgba(255, 255, 255, 0.85), transparent 45%),
     radial-gradient(circle at 85% 100%, rgba(255, 203, 5, 0.35), transparent 50%),
     linear-gradient(160deg, #8fd3ff 0%, #c9ecff 45%, #fff3cf 100%);
   background-attachment: fixed;
 }
-body::before {
+body::before, .spectator-backdrop::before {
   content: '';
   position: fixed;
   inset: -120px;
@@ -22,7 +22,7 @@ body::before {
   background-size: 120px 120px;
   animation: drift 40s linear infinite;
 }
-body::after {
+body::after, .spectator-backdrop::after {
   /* Nubes suaves que pasan por detrás de todo */
   content: '';
   position: fixed;

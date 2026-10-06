@@ -347,11 +347,10 @@
     };
   }
 
-  /** Vista de emisión: no ocupa un asiento y muestra todos los atriles. */
+  /** Vista de emisión: no ocupa un asiento y conserva los atriles privados. */
   function spectatorView(state) {
     const view = publicView(state, null);
     view.spectator = true;
-    view.players.forEach((p, i) => { p.rack = state.players[i].rack.slice(); });
     return view;
   }
 

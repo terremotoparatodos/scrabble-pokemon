@@ -14,7 +14,7 @@
  *   { t:'act', a:'exchange', indices, swapType }
  *   { t:'act', a:'pass' } · { t:'act', a:'hint' }
  *   { t:'ping' }                              latido (cada PING_MS)
- *   { t:'spectate' }                          vista OBS sin asiento, con todos los atriles
+ *   { t:'spectate' }                          vista OBS sin asiento ni atriles privados
  *
  * Anfitrión → celular
  *   { t:'state', room, you, lobby, game }     foto tras cada cambio; `game` solo

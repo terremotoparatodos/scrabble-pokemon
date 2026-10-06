@@ -283,7 +283,7 @@
         el('input', { class: 'room-link-input', attrs: { type: 'text', readonly: true, value: url, 'aria-label': 'Enlace para jugadores' } }),
         el('button', { class: 'btn', text: '📋 Copiar', attrs: { type: 'button' }, on: { click: () => copyLink(url) } }),
       ]),
-      el('p', { class: 'room-help', text: '🎥 OBS: ambos atriles visibles y cámaras transparentes. Usa este enlace como fuente Navegador y coloca tus cámaras debajo. Mantén abierta esta pantalla.' }),
+      el('p', { class: 'room-help', text: '🎥 OBS: cámaras más altas, con su interior transparente y el fondo original en el resto de la pantalla. Usa este enlace como fuente Navegador y coloca tus cámaras debajo. Mantén abierta esta pantalla.' }),
       el('div', { class: 'room-link' }, [
         el('input', { class: 'room-link-input', attrs: { type: 'text', readonly: true, value: obsUrl, 'aria-label': 'Enlace OBS' } }),
         el('button', { class: 'btn', text: '📋 Copiar OBS', attrs: { type: 'button' }, on: { click: () => copyLink(obsUrl) } }),
