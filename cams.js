@@ -3,6 +3,7 @@
  * costados del área de juego con 0, 2, 3 o 4 espacios para superponer video
  * en el stream o la edición. Debajo de cada cámara, la placa de su jugador.
  *
+ * - 1v1: cámaras arriba y las capturas debajo, una columna por lado.
  * - 2 cámaras: una por lado · 3: dos a la izquierda y una a la derecha ·
  *   4: dos por lado. Las columnas miden lo mismo, así el juego queda al centro.
  * - Los jugadores sin cámara tienen su placa en una esquina del área de juego.
@@ -45,10 +46,38 @@
     return prefs.count != null ? prefs.count : Math.max(2, Math.min(4, players));
   }
 
+  const seenCaptures = new Map();
+
+  function collection(p) {
+    const captures = p.captures || [];
+    const previous = seenCaptures.get(p.seat);
+    seenCaptures.set(p.seat, captures.length);
+    return el('section', { class: 'cam-collection', attrs: { 'aria-label': `Pokémon creados por ${p.name}` } }, [
+      el('div', { class: 'collection-head' }, [el('strong', { text: 'Pokémon creados' }), el('span', { text: captures.length })]),
+      captures.length
+        ? el('ol', { class: 'capture-list' }, [...captures].reverse().map((capture, i) => {
+          const entry = window.ScrabbleRules.DEX[capture.id - 1];
+          const fresh = previous != null && captures.length > previous && i < captures.length - previous;
+          return el('li', { class: `capture-card${fresh ? ' capture-in' : ''}` }, [
+            BV.sprite(capture.id),
+            el('div', { class: 'capture-info' }, [
+              el('strong', { text: entry.name }),
+              el('div', { class: 'capture-types' }, entry.types.map((type) => BV.typeChip(type, true))),
+            ]),
+            el('b', { class: 'capture-score', text: capture.score == null ? '— pts' : `+${capture.score} pts` }),
+          ]);
+        }))
+        : el('p', { class: 'collection-empty', text: 'Tus Pokémon aparecerán acá.' }),
+    ]);
+  }
+
   function slot(p, opts) {
-    return el('div', { class: `cam-slot ${opts.active ? 'turn' : ''} ${opts.winner ? 'winner' : ''}`, style: { '--pc': p ? p.color : '#adb5bd' } }, [
-      el('div', { class: 'cam-frame' }, [el('span', { class: 'cam-hint', text: 'Cámara' })]),
-      p ? BV.playerPlate(p, opts) : el('div', { class: 'plate empty' }, [el('small', { text: 'Sin jugador' })]),
+    return el('div', { class: 'cam-player', style: { '--pc': p ? p.color : '#adb5bd' } }, [
+      el('div', { class: `cam-slot ${opts.active ? 'turn' : ''} ${opts.winner ? 'winner' : ''}` }, [
+        el('div', { class: 'cam-frame' }, [el('span', { class: 'cam-hint', text: 'Cámara' })]),
+        p ? BV.playerPlate(p, opts) : el('div', { class: 'plate empty' }, [el('small', { text: 'Sin jugador' })]),
+      ]),
+      p ? collection(p) : null,
     ]);
   }
 
@@ -61,6 +90,7 @@
     const players = [...view.players].sort((a, b) => a.seat - b.seat);
     const count = countFor(players.length);
     layout.dataset.cams = String(count);
+    layout.classList.toggle('duel', players.length === 2 && count === 2);
     layout.classList.toggle('chroma', prefs.chroma);
     const optsFor = (p) => {
       const i = view.players.indexOf(p);

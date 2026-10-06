@@ -81,6 +81,17 @@
       "idle": "animation.jolteon.ground_idle"
     }
   },
+  "umbreon": {
+    "file": "umbreon.gltf",
+    "source": "https://cobblemon.tools/pokedex/pokemon/umbreon/models/umbreon.gltf",
+    "rotationY": 180,
+    "scale": 1,
+    "animations": {
+      "idle": "animation.umbreon.ground_idle",
+      "happy": "animation.umbreon.glow",
+      "cry": "animation.umbreon.pose"
+    }
+  },
   "treecko": {
     "file": "treecko.glb",
     "source": "https://cobblemon.tools/pokedex/pokemon/treecko/models/treecko.gltf",

@@ -1,6 +1,6 @@
 /*
  * Compañeros 3D: el Pokémon de cada jugador, parado en su posición de la
- * mesa sobre un pedestal de su color, con un cartel de nombre y puntos.
+ * mesa sobre un pedestal de su color. Nombre y puntos van en las cámaras.
  *
  * Modelos de Cobblemon (models/, los mismos de Pokémon Party). Si un modelo
  * no carga, queda el pedestal con el sprite del Pokémon como cartel.
@@ -10,7 +10,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { clone } from 'three/addons/utils/SkeletonUtils.js';
 import { tween, ease } from './tween.js';
-import { labelTexture, spriteTexture } from './textures.js';
+import { spriteTexture } from './textures.js';
 
 const HEIGHT = 2.8;
 const FOOTPRINT = 2.3;
@@ -57,13 +57,6 @@ export class Companion {
     rim.position.y = 0.25;
     this.root.add(base, rim);
     this.body.position.y = 0.25;
-
-    this.label = new THREE.Sprite(new THREE.SpriteMaterial({ transparent: true, depthTest: false }));
-    this.label.scale.set(3.6, 1.4, 1);
-    this.label.position.y = HEIGHT + 1.1;
-    this.label.renderOrder = 10;
-    this.root.add(this.label);
-    this.labelKey = '';
 
     this.load(model, avatar);
   }
@@ -138,15 +131,6 @@ export class Companion {
     this.oneShot = action;
   }
 
-  setLabel(name, score, active) {
-    const key = `${name}|${score}|${active}`;
-    if (key === this.labelKey) return;
-    this.labelKey = key;
-    if (this.label.material.map) this.label.material.map.dispose();
-    this.label.material.map = labelTexture([name, `${score} pts`], this.color, active);
-    this.label.material.needsUpdate = true;
-  }
-
   setActive(on) {
     this.active = on;
   }
@@ -194,7 +178,6 @@ export class Companion {
   update(dt, t) {
     if (this.mixer) this.mixer.update(dt);
     this.baseMat.emissiveIntensity = this.active ? 0.4 + Math.sin(t * 5) * 0.3 : 0;
-    this.label.position.y = HEIGHT + 1.1 + (this.active ? Math.sin(t * 4) * 0.08 : 0);
     // De vez en cuando, una animación al azar para que la mesa tenga vida.
     if (!this.busy && !this.oneShot && Math.random() < dt * 0.04) this.play(Math.random() < 0.5 ? 'happy' : 'cry');
     if (!this.busy) {

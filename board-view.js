@@ -11,8 +11,8 @@
 
   // Pokémon compañeros que se pueden elegir como ficha de jugador (número de
   // Pokédex → modelo 3D de models/, los mismos de Pokémon Party).
-  const AVATAR_MODELS = { 25: 'pikachu', 1: 'bulbasaur', 4: 'charmander', 7: 'squirtle', 252: 'treecko', 135: 'jolteon', 587: 'emolga', 714: 'noibat' };
-  const AVATARS = [25, 1, 4, 7, 252, 135, 587, 714];
+  const AVATAR_MODELS = { 25: 'pikachu', 1: 'bulbasaur', 4: 'charmander', 7: 'squirtle', 252: 'treecko', 135: 'jolteon', 197: 'umbreon', 587: 'emolga', 714: 'noibat' };
+  const AVATARS = [25, 1, 4, 7, 252, 135, 197, 587, 714];
 
   const PREMIUM_LABEL = { DL: ['x2', 'letra'], TL: ['x3', 'letra'], DW: ['x2', 'palabra'], TW: ['x3', 'palabra'] };
 

@@ -114,7 +114,6 @@ export function createBoard3D(container, input) {
       }
       const active = view.phase === 'play' && view.turn === i;
       entry.comp.setActive(active);
-      entry.comp.setLabel(p.name, p.score, active);
     });
     for (const [seat, entry] of companions) {
       if (!seen.has(seat)) {

@@ -66,6 +66,7 @@
         rack: [],
         type: drawType(random),
         created: [],
+        captures: [], // historial completo con los puntos de cada Pokémon
       })),
       turn: 0,
       round: 1,
@@ -133,6 +134,13 @@
     return null;
   }
 
+  function captureHistory(state, p, player) {
+    return p.captures || p.created.map((id) => {
+      const entry = state.log.find((e) => e.kind === 'play' && e.player === player && e.id === id);
+      return { id, score: entry ? entry.score : null, n: entry ? entry.n : null };
+    });
+  }
+
   /** tiles: [{ r, c, i }] con i = posición en el atril. */
   function play(state, player, tiles, rng) {
     const wrong = checkTurn(state, player);
@@ -153,7 +161,9 @@
     p.rack = p.rack.filter((_, i) => !usedIdx.has(i));
     p.score += res.score;
     const entry = res.entries.find((e) => p.type === R.ANY_TYPE || e.types.includes(p.type)) || res.entries[0];
+    p.captures = captureHistory(state, p, player);
     p.created.push(entry.id);
+    p.captures.push({ id: entry.id, score: res.score, n: state.moveNo });
     state.used.push(res.word);
     state.passes = 0;
     state.lastMove = { seat: p.seat, player, id: entry.id, word: res.word, score: res.score, bonus: res.bonus, cells: res.cells.map(({ r, c }) => ({ r, c })), placed: placements.map(({ r, c }) => ({ r, c })), type: p.type };
@@ -250,6 +260,8 @@
         score: p.score,
         type: p.type,
         created: p.created,
+        // Las partidas anteriores a este historial se recuperan del registro.
+        captures: captureHistory(state, p, i),
         rackCount: p.rack.length,
         rack: i === me ? p.rack : null,
       })),

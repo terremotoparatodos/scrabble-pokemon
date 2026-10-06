@@ -105,6 +105,8 @@
 
   function start(players) {
     state = G.createGame({ players, rounds: Setup.rounds() }, Math.random);
+    window.GameAudio.observe(null);
+    window.GameAudio.play('start');
     shownMove = 0;
     curtainOpenFor = null;
     closeOverlay('endDialog');
@@ -115,6 +117,7 @@
   function quit() {
     clearTimeout(botTimer);
     state = null;
+    window.GameAudio.observe(null);
     save();
     closeOverlay('endDialog');
     showScreen('setup');
@@ -283,6 +286,7 @@
     if (!isNew) return;
     // En 3D el Pokémon aparece flotando sobre el tablero, sin ventana.
     if (has3d()) return board3d.celebrate(view);
+    window.GameAudio.play('capture');
     $('revealBody').replaceChildren(BV.revealCard(view));
     openOverlay('revealDialog');
     clearTimeout(revealTimer);
@@ -331,6 +335,7 @@
     const wait = justPlayed ? (has3d() ? CELEBRATE_3D_MS - 500 : REVEAL_MS) : 60;
     setTimeout(() => {
       if (animatedTurn !== key) return;
+      window.GameAudio.play('turn');
       for (const node of document.querySelectorAll('#hudTurn .hud-pill, .cam-slot.turn, .corner-plate .plate.active')) {
         node.classList.remove('turn-in');
         void node.offsetWidth; // reinicia la animación
@@ -342,6 +347,7 @@
   function render() {
     if (!state) return;
     const view = hostView();
+    window.GameAudio.observe(view);
     Cams.render(view, isRemote);
     Cams.renderControls($('camControls'), view.players.length);
     renderHudTop(view);
@@ -357,6 +363,7 @@
   // ── Eventos ──
   $('setupForm').addEventListener('submit', (e) => {
     e.preventDefault();
+    if (!$('setupForm').reportValidity()) return;
     const players = Setup.players();
     if (typeof players === 'string') return toast(players);
     start(players);

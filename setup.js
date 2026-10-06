@@ -22,7 +22,7 @@
   ];
 
   let seats = defaults();
-  let rounds = 8;
+  let rounds = 10;
   const listeners = [];
 
   function defaults() {
@@ -44,7 +44,7 @@
         if (AVATARS.includes(s.avatar)) seats[i].avatar = s.avatar;
         if (MODES.some(([m]) => m === s.mode)) seats[i].mode = s.mode;
       });
-      if ([0, 5, 8, 12].includes(saved.rounds)) rounds = saved.rounds;
+      if (Number.isInteger(saved.rounds) && saved.rounds >= 0 && saved.rounds <= 99) rounds = saved.rounds;
     } catch (err) {
       console.warn('No se pudo leer la configuración guardada:', err);
     }
@@ -151,7 +151,7 @@
                 'button',
                 {
                   class: 'avatar-opt',
-                  attrs: { type: 'button', role: 'radio', 'aria-checked': String(s.avatar === id), disabled: locked },
+                  attrs: { type: 'button', role: 'radio', 'aria-label': window.ScrabbleRules.DEX[id - 1].name, 'aria-checked': String(s.avatar === id), disabled: locked },
                   on: {
                     click: () => {
                       s.avatar = id;
@@ -177,7 +177,12 @@
   load();
   document.addEventListener('DOMContentLoaded', () => {
     $('roundsSelect').addEventListener('change', (e) => {
-      rounds = Number(e.target.value);
+      const input = e.target;
+      if (input.value === '' || !input.checkValidity()) {
+        input.value = String(rounds);
+        return;
+      }
+      rounds = Number(input.value);
       emit();
     });
     render();

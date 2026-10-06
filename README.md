@@ -20,6 +20,10 @@ directamente los archivos estáticos, incluidos los modelos y las librerías.
 
 ## Cómo jugar
 
+La duración se elige en la configuración: **10 rondas por defecto**, cualquier
+cantidad entre 1 y 99, o **0** para jugar hasta vaciar la bolsa. Entre los
+compañeros disponibles también está **Umbreon**, con su modelo 3D.
+
 | Forma | Qué hace falta |
 | --- | --- |
 | **Celulares en la misma Wi-Fi** | Correr el servidor local en la PC y abrir la pantalla principal con la **IP de la PC** (por ejemplo `http://192.168.1.9:8766`). «🌐 Crear sala en línea» muestra el enlace para los celulares. |
@@ -50,6 +54,9 @@ son las **cámaras** de los jugadores.
   cada cámara va la placa del jugador (compañero, nombre, puntos, ficha de
   tipo y fichas en el atril); la del jugador en turno se pinta de su color.
   Los jugadores sin cámara tienen su placa en una esquina del área de juego.
+  En **1v1**, las dos cámaras están arriba de sus columnas laterales. Debajo
+  se agregan tarjetas con los Pokémon creados y los puntos de cada jugada;
+  el historial se guarda con la partida y permite desplazarse si hay muchas.
 - **Área de juego:** arriba, la barra del turno (quién juega, qué tipo debe
   crear, ronda y bolsa), el menú ☰, ⟲ (centrar) y ⛶ (pantalla completa).
   Abajo, el atril cuando el jugador en turno juega en esa pantalla.
@@ -59,7 +66,9 @@ son las **cámaras** de los jugadores.
   Los avisos y el resultado aparecen dentro del área de juego, nunca sobre
   las cámaras.
 - **Menú ☰:** nueva partida, configuración, cómo jugar, vista 2D/3D, vista
-  cenital, cámaras, sala en línea y la Pokédex de la partida.
+  cenital, cámaras, sonidos, sala en línea y la Pokédex de la partida.
+  Los efectos acompañan las fichas, las pistas, los cambios, los turnos y la
+  Poké Ball; se activan al tocar la página y se pueden silenciar en el menú.
 - **Avisos y turnos sin tapar nada:** los avisos breves («Misty se conectó»)
   aparecen dentro de la barra de arriba. El cambio de turno se anima en la
   barra, en la cámara/placa del jugador y, en su pantalla, en el atril (que
@@ -85,7 +94,8 @@ son las **cámaras** de los jugadores.
 
 La mesa es cuadrada, con **un jugador por lado** (Jugador 1 al sur, 2 al
 oeste, 3 al norte y 4 al este), cada uno con su atril, su Pokémon compañero
-(modelos de Cobblemon) y un cartel de nombre y puntos. Alrededor está el
+(modelos de Cobblemon). El nombre y los puntos se muestran en las placas de
+las cámaras, sin carteles repetidos sobre los personajes. Alrededor está el
 **diorama de Kanto** de Pokémon Party, y en una esquina, la **bolsa**.
 
 - **Vista de jugador:** cada jugador ve el tablero desde su lado, orientado
@@ -141,6 +151,7 @@ oeste, 3 al norte y 4 al este), cada uno con su atril, su Pokémon compañero
 | `net-protocol.js`, `net-host.js`, `control.js` | Sala PeerJS y página del jugador. |
 | `view3d/` | Vista 3D (three.js): `stage.js` mesa, luces y diorama (`scenery.js`, `townmodels.js` de Pokémon Party); `board3d.js` une todo; `seats.js` posiciones de la mesa; `racks.js` atriles, bolsa y fichas que vuelan; `mouse.js` mover/girar/zoom y fichas puestas; `tiles.js` fichas; `camera.js` cámara (primera persona y vista general); `companions.js` modelos; `fx.js` Poké Ball; `particles.js` partículas; `textures.js` texturas en canvas. |
 | `effects.css`, `hero.js` | Fondo, tarjetas y animaciones de interfaz; Pokémon flotando en la configuración. |
+| `audio.js` | Efectos originales sintetizados con Web Audio y control para silenciarlos. |
 | `stage.css`, `hud.js`, `cams.js` | Pantalla completa: espacio libre del tablero, menú, pantalla completa; columnas de cámaras y placas. |
 | `rack-drag.js` | Arrastrar fichas del atril al tablero y reordenar el atril. |
 

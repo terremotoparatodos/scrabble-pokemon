@@ -148,4 +148,45 @@ test('turno ajeno, cambio y pase', () => {
   assert.equal(state.round, 2);
 });
 
+test('capturas: puntajes por Pokémon, persistencia y partidas anteriores', () => {
+  const rng = seeded(8);
+  const players = [0, 1].map((seat) => ({ seat, name: `J${seat}`, color: '#000', avatar: seat ? 25 : 197 }));
+  const state = G.createGame({ players, rounds: 10 }, rng);
+  function playBest() {
+    const player = state.turn;
+    const p = state.players[player];
+    const best = M.bestMove(state.board, p.rack, p.type, state.used);
+    const free = p.rack.map((l, i) => ({ l, i }));
+    const tiles = best.place.map(({ r, c, l }) => ({ r, c, i: free.splice(free.findIndex((x) => x.l === l), 1)[0].i }));
+    const res = G.act(state, player, { type: 'play', tiles }, rng);
+    assert.equal(res.ok, true);
+    return { id: res.move.id, score: res.move.score, n: state.moveNo };
+  }
+  assert.equal(G.act(state, 0, { type: 'hint' }, rng).ok, true);
+  const first = playBest();
+  assert.deepEqual(G.publicView(state, null).players[0].captures, [first]);
+  assert.equal(state.players[0].score, first.score - G.HINT_COST);
+  const saved = JSON.parse(JSON.stringify(state));
+  saved.log = []; // El historial de tarjetas no depende del registro limitado.
+  assert.deepEqual(G.publicView(saved, null).players[0].captures, [first]);
+  delete state.players[0].captures; // Migración de una partida previa a las tarjetas.
+  assert.deepEqual(G.publicView(state, null).players[0].captures, [first]);
+  playBest();
+  if (state.phase === 'play') {
+    const second = playBest();
+    assert.deepEqual(G.publicView(state, null).players[0].captures, [first, second]);
+  }
+});
+
+test('la duración elegida termina al completar la ronda', () => {
+  const rng = seeded(3);
+  const players = [0, 1].map((seat) => ({ seat, name: `J${seat}`, color: '#000', avatar: 197 }));
+  const state = G.createGame({ players, rounds: 1 }, rng);
+  G.act(state, 0, { type: 'pass' }, rng);
+  assert.equal(state.phase, 'play');
+  G.act(state, 1, { type: 'pass' }, rng);
+  assert.equal(state.phase, 'over');
+  assert.equal(state.endReason, 'rounds');
+});
+
 console.log(`✓ ${passed} pruebas`);

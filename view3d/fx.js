@@ -12,8 +12,9 @@ import { sparks, confetti } from './particles.js';
 function makePokeBall() {
   const r = 0.42;
   const ball = new THREE.Group();
-  const white = new THREE.MeshStandardMaterial({ color: '#f8f9fa', roughness: 0.35 });
-  const red = new THREE.MeshStandardMaterial({ color: '#e3350d', roughness: 0.3 });
+  // Al abrirse se ve el interior de ambas mitades: dibujar las dos caras.
+  const white = new THREE.MeshStandardMaterial({ color: '#f8f9fa', roughness: 0.35, side: THREE.DoubleSide });
+  const red = new THREE.MeshStandardMaterial({ color: '#e3350d', roughness: 0.3, side: THREE.DoubleSide });
   const black = new THREE.MeshStandardMaterial({ color: '#1f2933', roughness: 0.5 });
   const bottom = new THREE.Mesh(new THREE.SphereGeometry(r, 28, 14, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2), white);
   const lid = new THREE.Group(); // pivote en la bisagra (atrás)
@@ -41,6 +42,7 @@ function makePokeBall() {
  */
 export async function createdSequence(scene, { from, to, id, name, score, color, pushEffect }) {
   const { ball, lid } = makePokeBall();
+  window.GameAudio?.play('throw');
   ball.position.copy(from);
   scene.add(ball);
   const land = to.clone().setY(to.y + 0.42);
@@ -58,6 +60,7 @@ export async function createdSequence(scene, { from, to, id, name, score, color,
   await tween(360, (t) => (ball.rotation.z = Math.sin(t * Math.PI * 4) * 0.35 * (1 - t)), ease.linear);
 
   // Se abre con un destello
+  window.GameAudio?.play('open');
   const flash = new THREE.Mesh(
     new THREE.SphereGeometry(1, 24, 16),
     new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }),
@@ -77,6 +80,7 @@ export async function createdSequence(scene, { from, to, id, name, score, color,
   flash.material.dispose();
 
   // Sale el Pokémon
+  window.GameAudio?.play('capture');
   const group = new THREE.Group();
   group.position.copy(land);
   const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: spriteTexture(id), transparent: true, depthTest: false }));
@@ -95,6 +99,13 @@ export async function createdSequence(scene, { from, to, id, name, score, color,
   }, ease.outBack);
   await shrinkBall;
   scene.remove(ball);
+  const materials = new Set();
+  ball.traverse((m) => {
+    if (!m.isMesh) return;
+    m.geometry.dispose();
+    materials.add(m.material);
+  });
+  materials.forEach((material) => material.dispose());
   await tween(1700, (t) => {
     sprite.position.y = 4.2 + Math.sin(t * Math.PI * 2) * 0.18;
     sprite.material.rotation = Math.sin(t * Math.PI * 4) * 0.05;

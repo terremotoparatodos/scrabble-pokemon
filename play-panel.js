@@ -67,6 +67,7 @@
 
     function place(r, c, i) {
       pending.push({ r, c, i });
+      window.GameAudio?.play('tile');
       selected = null;
     }
 
@@ -164,6 +165,7 @@
         const j = Math.floor(Math.random() * (i + 1));
         [order[i], order[j]] = [order[j], order[i]];
       }
+      window.GameAudio?.play('exchange');
       render();
     }
 

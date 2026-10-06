@@ -177,6 +177,8 @@
   function onMessage(msg) {
     if (!Net.isMessage(msg, true) || msg.t === 'pong') return;
     if (msg.t === 'state') {
+      if (!last?.game && msg.game?.phase === 'play') window.GameAudio.play('start');
+      if (!msg.game) window.GameAudio.observe(null);
       last = msg;
       render();
     } else if (msg.t === 'kicked') {
@@ -262,7 +264,7 @@
             {
               class: 'avatar-opt',
               style: { '--pc': opts[joinSeat] ? opts[joinSeat].color : '#e3350d' },
-              attrs: { type: 'button', role: 'radio', 'aria-checked': String(me.avatar === id) },
+              attrs: { type: 'button', role: 'radio', 'aria-label': window.ScrabbleRules.DEX[id - 1].name, 'aria-checked': String(me.avatar === id) },
               on: {
                 click: () => {
                   me.avatar = id;
@@ -355,6 +357,7 @@
 
   function renderPlay() {
     const g = last.game;
+    window.GameAudio.observe(g);
     // Barra de arriba: todos los jugadores (quién juega, puntos y tipo) y la ronda.
     const round = g.rounds ? `Ronda ${g.round}/${g.rounds}` : `Ronda ${g.round}`;
     $('hudTurn').replaceChildren(
@@ -377,6 +380,7 @@
     safeArea.schedule();
     const myTurn = g.phase === 'play' && g.turn === g.me;
     if (myTurn && !wasMyTurn) {
+      window.GameAudio.play('turn');
       // Tu turno: el atril y tu puntaje se animan (nada tapa el tablero).
       for (const node of document.querySelectorAll('#playPanel .play-panel, .ctrl-score.mine')) {
         node.classList.remove('turn-in');
@@ -407,6 +411,7 @@
     if (!(g.log[0] && g.log[0].kind === 'play' && g.log[0].n === g.moveNo)) return;
     // En 3D el Pokémon sale de la Poké Ball sobre el tablero, sin ventana.
     if (has3d()) return board3d.celebrate(g);
+    window.GameAudio.play('capture');
     $('revealBody').replaceChildren(BV.revealCard(g));
     openOverlay('revealDialog');
     clearTimeout(revealTimer);
