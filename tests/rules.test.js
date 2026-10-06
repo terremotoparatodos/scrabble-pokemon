@@ -84,17 +84,11 @@ test('tipo recomendado: cualquier Pokémon vale, coincidencia x2 y comodín x2',
   assert.equal(flying.score, fire.score);
 });
 
-test('búsqueda, pista y regla de oro permiten Pokémon fuera del tipo recomendado', () => {
+test('búsqueda, pista y jugada permiten Pokémon fuera del tipo recomendado', () => {
   const board = R.emptyBoard();
   const rack = 'MEWXXXXXXX'.split('');
-  const bag = R.newBag();
-  const before = rack.slice();
   const moves = M.findMoves(board, rack, 'fire', []);
   assert.ok(moves.some((m) => m.word === 'MEW'));
-  const result = M.ensurePlayable({ board, rack, bag, type: 'fire', used: [], rng: seeded(1) });
-  assert.equal(result.changed, false);
-  assert.equal(result.type, 'fire');
-  assert.deepEqual(rack, before);
   const best = M.bestMove(board, rack, 'fire', []);
   assert.equal(best.word, 'MEW');
   const state = G.createGame({ players: [0, 1].map((seat) => ({seat, name: `J${seat}`, color:'#000', avatar:25})), rounds:10 }, seeded(4));
@@ -131,7 +125,48 @@ test('rechaza palabras sueltas, con huecos o que no son Pokémon', () => {
   assert.equal(R.validatePlay({ board, placements: fake, type: R.ANY_TYPE, used: [] }).ok, false);
 });
 
-test('regla de oro: un atril imposible se ajusta hasta tener jugada', () => {
+function assertOptions(board, rack, type, used) {
+  const moves = M.findMoves(board, rack, type, used);
+  assert.ok(new Set(moves.map((m) => m.word)).size >= 2, 'debe haber dos nombres distintos');
+  assert.ok(moves.some((m) => R.wordHasType(m.word, type)), 'el x2 debe tener una opción disponible');
+  for (const m of moves) {
+    assert.equal(R.validatePlay({ board, placements: m.place, type, used }).ok, true, m.word);
+  }
+  return moves;
+}
+
+test('regresión: la mano SLEIECRNLE con Fantasma pasa a dos opciones y x2 posible', () => {
+  const board = R.emptyBoard();
+  const rack = 'SLEIECRNLE'.split('');
+  assert.deepEqual(M.findMoves(board, rack, 'ghost', []).map((m) => m.word), ['SEEL']);
+  const result = M.ensurePlayable({ board, rack, bag: R.newBag(), type: 'ghost', used: [], rng: seeded(1) });
+  assert.equal(result.changed, true);
+  assert.equal(result.typeChanged, true);
+  assert.equal(rack.length, R.RACK_SIZE);
+  assertOptions(board, rack, result.type, []);
+  // Una sola sustitución ya permite SEEL y CELEBI: no deben cambiarse más fichas.
+  const missing = M.missingLetters('SLEIECRNLE'.split(''), rack.map((l) => ({l})));
+  assert.equal(missing.length, 1);
+});
+
+test('dos opciones existentes conservan el atril; sólo se corrige el tipo imposible', () => {
+  for (const type of ['ghost', 'psychic', 'electric', R.ANY_TYPE]) {
+    const board = R.emptyBoard();
+    const rack = 'PIKACHUMEW'.split('');
+    const before = rack.slice();
+    const bag = R.newBag();
+    const bagBefore = bag.slice();
+    const result = M.ensurePlayable({ board, rack, bag, type, used: [], rng: seeded(2) });
+    assert.equal(result.changed, false);
+    assert.deepEqual(rack, before);
+    assert.deepEqual(bag, bagBefore);
+    assert.equal(result.typeChanged, type === 'ghost');
+    if (type !== 'ghost') assert.equal(result.type, type);
+    assertOptions(board, rack, result.type, []);
+  }
+});
+
+test('regla de oro: un atril imposible se ajusta hasta tener dos Pokémon distintos', () => {
   const rng = seeded(7);
   const board = R.emptyBoard();
   put(board, 'PIKACHU', 7, 4, 'H');
@@ -140,10 +175,53 @@ test('regla de oro: un atril imposible se ajusta hasta tener jugada', () => {
   const res = M.ensurePlayable({ board, rack, bag, type: 'fire', used: ['PIKACHU'], rng });
   assert.equal(res.changed, true);
   assert.equal(rack.length, R.RACK_SIZE);
-  assert.ok(M.findMoves(board, rack, res.type, ['PIKACHU']).length > 0);
+  assertOptions(board, rack, res.type, ['PIKACHU']);
 });
 
-test('partidas completas con bots: siempre hay un Pokémon posible y todo cierra', () => {
+test('varias posiciones de un solo Pokémon no cuentan como dos alternativas', () => {
+  const board = R.emptyBoard();
+  put(board, 'SEEL', 7, 5, 'H');
+  const used = R.WORDS.filter((w) => w !== 'MEW');
+  const rack = 'MEWXXXXXXX'.split('');
+  const moves = M.findMoves(board, rack, 'psychic', used);
+  assert.ok(moves.length > 1);
+  assert.equal(new Set(moves.map((m) => m.word)).size, 1);
+  const result = M.ensurePlayable({ board, rack, bag: R.newBag(), type: 'psychic', used, rng: seeded(1) });
+  assert.equal(result.move, null);
+  assert.equal(result.reason, 'options');
+});
+
+test('al agotarse la bolsa, un atril corto sigue teniendo dos alternativas', () => {
+  const board = R.emptyBoard();
+  put(board, 'SEEL', 7, 5, 'H');
+  const rack = ['Q'];
+  const result = M.ensurePlayable({board, rack, bag:[], type:'ghost', used:['SEEL'], rng:seeded(4)});
+  assert.ok(result.move);
+  assert.ok(rack.length <= R.RACK_SIZE);
+  assertOptions(board, rack, result.type, ['SEEL']);
+});
+
+test('restaurar una partida aplica la garantía y conserva la pista pagada', () => {
+  const rng = seeded(3);
+  const players = [0, 1].map((seat) => ({seat, name:`J${seat}`, color:'#000', avatar:25}));
+  const state = G.createGame({players, rounds:10}, rng);
+  state.players[0].rack = 'SLEIECRNLE'.split('');
+  state.players[0].type = 'ghost';
+  delete state.turnPolicyVersion;
+  assert.equal(G.act(state, 0, {type:'hint'}, rng).ok, true);
+  const score = state.players[0].score;
+  assert.equal(G.upgradeTurn(state, rng), true);
+  assert.equal(state.players[0].score, score);
+  const moves = assertOptions(state.board, state.players[0].rack, state.players[0].type, state.used);
+  assert.ok(moves.some((m) => m.word === state.hint.word));
+  assert.equal(G.act(state, 0, {type:'hint'}, rng).ok, true);
+  assert.equal(state.players[0].score, score);
+  const snapshot = JSON.stringify(state);
+  assert.equal(G.upgradeTurn(state, rng), false);
+  assert.equal(JSON.stringify(state), snapshot);
+});
+
+test('partidas completas con bots: siempre hay dos Pokémon y un x2 disponible', () => {
   for (let seed = 1; seed <= 12; seed++) {
     const rng = seeded(seed);
     const n = 2 + (seed % 3);
@@ -152,8 +230,7 @@ test('partidas completas con bots: siempre hay un Pokémon posible y todo cierra
     let guard = 0;
     while (state.phase === 'play' && guard++ < 400) {
       const p = state.players[state.turn];
-      const moves = M.findMoves(state.board, p.rack, p.type, state.used);
-      assert.ok(moves.length > 0, `semilla ${seed}: sin jugada posible para ${p.name}`);
+      assertOptions(state.board, p.rack, p.type, state.used);
       const best = M.bestMove(state.board, p.rack, p.type, state.used);
       const free = p.rack.map((l, i) => ({ l, i }));
       const tiles = best.place.map(({ r, c, l }) => {

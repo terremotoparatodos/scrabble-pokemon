@@ -404,6 +404,7 @@
   // ── Inicio ──
   state = load();
   if (state) {
+    if (G.upgradeTurn(state)) save();
     shownMove = state.moveNo;
     if (state.phase === 'over') shownEndFor = state.moveNo;
     showScreen('game');

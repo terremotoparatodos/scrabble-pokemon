@@ -117,8 +117,9 @@ las cámaras, sin carteles repetidos sobre los personajes. Alrededor está el
 - **Ficha de tipo recomendado:** puedes crear cualquier Pokémon. Si coincide
   con el tipo recomendado (cualquiera de sus dos tipos), el puntaje total de
   la jugada da **x2**, incluidos los multiplicadores del tablero y el bonus
-  por siete fichas. Sale según cuántos Pokémon hay de cada tipo; ★ Comodín
-  (10 %) da x2 a cualquier Pokémon. Después de jugar se roba otra.
+  por siete fichas. Se sortea según cuántos Pokémon hay de cada tipo y se ajusta
+  a las opciones del atril; ★ Comodín (10 %) da x2 a cualquier Pokémon.
+  Después de jugar se roba otra.
 - **Palabras:** nombres sin acentos ni signos (`Mr. Mime` → `MRMIME`,
   `Flabébé` → `FLABEBE`, `Ho-Oh` → `HOOH`). En una sola fila o columna, sin
   huecos. La primera pasa por la Poké Ball del centro; las demás se cruzan o
@@ -129,16 +130,17 @@ las cámaras, sin carteles repetidos sobre los personajes. Alrededor está el
   casillas x2/x3 letra y x2/x3 palabra (solo las que se cubren ese turno),
   +20 por usar 7 fichas o más.
 - **Regla de oro:** al empezar cada turno, la bolsa garantiza que con las
-  fichas del jugador se pueda crear al menos un Pokémon nuevo en el tablero,
-  de cualquier tipo. Si no se puede, cambia las fichas justas (vuelven a la
-  bolsa). El tipo recomendado no limita las jugadas ni fuerza cambios.
+  fichas del jugador se puedan crear al menos 2 Pokémon nuevos y distintos en
+  el tablero. Si no se puede, cambia las mínimas fichas necesarias (vuelven a
+  la bolsa). El tipo recomendado coincide con al menos una opción disponible;
+  se conserva cuando ya coincide, y cualquier otro tipo sigue siendo válido.
   El atril avisa cuando hubo ajuste. Bots y pistas comparan las jugadas con
   el bonus x2 incluido.
 - **Otras acciones:** cambiar fichas y/o la ficha de tipo (usa el turno),
   pasar, o pedir una pista (−5 puntos: muestra un Pokémon posible).
 - **Fin:** al terminar las rondas elegidas, al vaciarse la bolsa (se termina
-  la ronda), si todos pasan dos veces seguidas o cuando ya no entra ningún
-  Pokémon en el tablero.
+  la ronda), si todos pasan dos veces seguidas o cuando el tablero ya no permite
+  dos Pokémon distintos jugables con un mismo atril.
 
 ## Código
 

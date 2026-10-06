@@ -276,6 +276,7 @@
   }
 
   const END_REASON = {
+    options: 'No quedan dos Pokémon distintos que puedan jugarse con un mismo atril.',
     rounds: 'Se jugaron todas las rondas.',
     bag: 'Se vació la bolsa de fichas.',
     passes: 'Todos pasaron dos veces seguidas.',

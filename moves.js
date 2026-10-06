@@ -1,14 +1,14 @@
 /*
  * Búsqueda de jugadas y la regla de oro: con las fichas de cada jugador
- * SIEMPRE se puede crear al menos un Pokémon nuevo en algún lugar del tablero.
+ * hay al menos dos Pokémon distintos que pueden crearse en el tablero.
  * El tipo recomendado sólo modifica el puntaje; nunca limita las opciones.
  *
  * - placements(): lugares del tablero donde entra cada Pokémon, sin mirar el
  *   atril (qué letras faltarían poner).
  * - findMoves(): de esos lugares, los que se pueden armar con el atril.
- * - ensurePlayable(): si no hay ninguno, cambia las fichas justas
- *   para que haya uno. Las fichas que salen vuelven
- *   a la bolsa.
+ * - ensurePlayable(): ajusta las fichas necesarias para tener dos alternativas
+ *   y recomienda un tipo que coincide con alguna. Las fichas que salen vuelven
+ *   a la bolsa. Si el tablero ya no permite dos alternativas, la partida termina.
  *
  * Por simpleza, las jugadas que se buscan acá no forman palabras cruzadas
  * (las fichas nuevas no tocan otras de costado). El validador sí acepta
@@ -71,7 +71,7 @@
       for (const word of words) {
         // Primera jugada: horizontal sobre la Poké Ball del centro.
         const c = CENTER - Math.floor(word.length / 2);
-        if (c >= 0 && c + word.length <= SIZE) {
+        if (word.length <= RACK_SIZE && c >= 0 && c + word.length <= SIZE) {
           out.push({ word, r: CENTER, c, dir: 'H', place: [...word].map((l, k) => ({ r: CENTER, c: c + k, l })) });
         }
       }
@@ -138,38 +138,83 @@
     return letter;
   }
 
-  /**
-   * Garantiza que el atril pueda crear un Pokémon. Modifica `rack` y `bag`.
-   * Devuelve { type, changed, typeChanged, move } (move: la jugada asegurada).
-   */
+  function recommendType(moves, type, rng) {
+    if (moves.some((m) => R.wordHasType(m.word, type))) return type;
+    const types = [...new Set(moves.flatMap((m) => R.entriesFor(m.word).flatMap((e) => e.types)))];
+    return pick(types, rng);
+  }
+
+  /** Dos nombres distintos, cada uno jugable por separado con el mismo atril. */
   function ensurePlayable({ board, rack, bag, type, used, rng }) {
     const random = rng || Math.random;
-    const ready = findMoves(board, rack, type, used);
-    if (ready.length) return { type, changed: false, typeChanged: false, move: ready[0] };
-
     const options = placements(board, wordsOfType(R.ANY_TYPE, used));
-    if (!options.length) return { type, changed: false, typeChanged: false, move: null };
+    const ready = options.filter((p) => missingLetters(rack, p.place).length === 0);
+    if (new Set(ready.map((m) => m.word)).size >= 2) {
+      const recommended = recommendType(ready, type, random);
+      return { type: recommended, changed: false, typeChanged: recommended !== type, move: ready[0] };
+    }
 
-    // Lo que menos fichas cambie; entre esos, uno al azar.
-    const scored = options.map((p) => ({ p, missing: missingLetters(rack, p.place) }));
-    const fewest = Math.min(...scored.map((x) => x.missing.length));
-    const { p: move, missing } = pick(scored.filter((x) => x.missing.length === fewest), random);
+    // Mismo nombre + mismas letras necesarias es una sola alternativa de búsqueda.
+    const seen = new Set();
+    const candidates = [];
+    for (const move of options) {
+      const letters = move.place.map((x) => x.l).sort();
+      const key = `${move.word}:${letters.join('')}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      candidates.push({ move, needed: R.countLetters(letters), missing: missingLetters(rack, move.place).length });
+    }
+    candidates.sort((a, b) => a.missing - b.missing);
+    const have = R.countLetters(rack);
+    let best = null;
+    let ties = 0;
+    for (let i = 0; i < candidates.length; i++) {
+      const a = candidates[i];
+      if (best && a.missing > best.missing.length) break;
+      for (let j = i + 1; j < candidates.length; j++) {
+        const b = candidates[j];
+        if (best && b.missing > best.missing.length) break;
+        if (a.move.word === b.move.word) continue;
+        // Son alternativas: una letra compartida sirve para ambas jugadas.
+        // Por eso se toma el máximo por letra, no la suma de las dos palabras.
+        const needed = { ...a.needed };
+        for (const l of Object.keys(b.needed)) needed[l] = Math.max(needed[l] || 0, b.needed[l]);
+        if (Object.values(needed).reduce((sum, n) => sum + n, 0) > RACK_SIZE) continue;
+        const missing = [];
+        for (const [l, n] of Object.entries(needed)) {
+          for (let k = have[l] || 0; k < n; k++) missing.push(l);
+        }
+        const keepsType = R.wordHasType(a.move.word, type) || R.wordHasType(b.move.word, type);
+        if (!best || missing.length < best.missing.length ||
+            (missing.length === best.missing.length && keepsType && !best.keepsType)) {
+          best = { moves: [a.move, b.move], needed, missing, keepsType };
+          ties = 1;
+        } else if (missing.length === best.missing.length && keepsType === best.keepsType && random() < 1 / ++ties) {
+          best = { moves: [a.move, b.move], needed, missing, keepsType };
+        }
+      }
+    }
+    if (!best) return { type, changed: false, typeChanged: false, move: null, reason: options.length ? 'options' : 'board' };
 
-    // Salen las fichas que esa jugada no usa, al azar, una por cada faltante.
-    const needed = R.countLetters(move.place.map((x) => x.l));
+    // Conserva las letras de ambas alternativas; devuelve sólo las sobrantes.
+    const { missing } = best;
+    const needed = { ...best.needed };
     const spare = [];
     rack.forEach((l, i) => {
       if (needed[l]) needed[l]--;
       else spare.push(i);
     });
     const out = [];
-    while (out.length < missing.length && spare.length) {
+    const removeCount = Math.max(0, rack.length + missing.length - RACK_SIZE);
+    while (out.length < removeCount && spare.length) {
       out.push(spare.splice(Math.floor(random() * spare.length), 1)[0]);
     }
     out.sort((a, b) => b - a);
     for (const i of out) bag.push(rack.splice(i, 1)[0]);
     for (const l of missing) rack.push(takeFromBag(bag, l));
-    return { type, changed: true, typeChanged: false, move };
+    const playable = options.filter((p) => missingLetters(rack, p.place).length === 0);
+    const recommended = recommendType(playable, type, random);
+    return { type: recommended, changed: missing.length > 0, typeChanged: recommended !== type, move: best.moves[0] };
   }
 
   root.ScrabbleMoves = { placements, findMoves, bestMove, ensurePlayable, missingLetters, wordsOfType };

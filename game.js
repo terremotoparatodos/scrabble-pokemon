@@ -18,6 +18,7 @@
   const ANY_TYPE_CHANCE = 0.1; // «Comodín»: x2 para cualquier tipo
   const HINT_COST = 5;
   const LOG_MAX = 40;
+  const TURN_POLICY_VERSION = 2;
 
   // Las fichas de tipo salen según cuántos Pokémon hay de cada tipo.
   const TYPE_WEIGHTS = R.TYPE_KEYS.map((t) => [t, R.DEX.filter((e) => e.types.includes(t)).length]);
@@ -95,10 +96,26 @@
     const p = state.players[state.turn];
     state.hint = null;
     const res = M.ensurePlayable({ board: state.board, rack: p.rack, bag: state.bag, type: p.type, used: state.used, rng });
-    // Ya no entra ningún Pokémon en el tablero: la regla de oro no se puede cumplir y la partida termina.
-    if (!res.move) return finish(state, 'board');
+    state.turnPolicyVersion = TURN_POLICY_VERSION;
+    // El tablero debe permitir dos nombres distintos con un mismo atril.
+    if (!res.move) return finish(state, res.reason);
     p.type = res.type;
-    state.turnNote = res.changed ? 'La bolsa ajustó tus fichas: hay al menos un Pokémon posible.' : null;
+    state.turnNote = res.changed
+      ? 'La bolsa ajustó tus fichas: hay al menos 2 Pokémon distintos posibles y uno coincide con el tipo recomendado.'
+      : res.typeChanged ? 'El tipo recomendado se ajustó para que puedas aprovechar el x2 con tus fichas.' : null;
+  }
+
+  /** Aplica la regla nueva a partidas guardadas, conservando una pista ya pagada. */
+  function upgradeTurn(state, rng) {
+    if (state.phase !== 'play' || state.turnPolicyVersion === TURN_POLICY_VERSION) return false;
+    const hadHint = !!state.hint;
+    startTurn(state, rng);
+    if (hadHint && state.phase === 'play') {
+      const p = state.players[state.turn];
+      const move = M.bestMove(state.board, p.rack, p.type, state.used);
+      state.hint = { player: state.turn, id: R.entriesFor(move.word)[0].id, word: move.word, r: move.r, c: move.c, dir: move.dir };
+    }
+    return true;
   }
 
   function nextTurn(state, rng) {
@@ -114,7 +131,7 @@
     startTurn(state, rng);
   }
 
-  /** reason: 'rounds' | 'bag' | 'passes' | 'board'. */
+  /** reason: 'rounds' | 'bag' | 'passes' | 'board' | 'options'. */
   function finish(state, reason) {
     state.phase = 'over';
     state.endReason = reason;
@@ -266,5 +283,5 @@
     };
   }
 
-  root.ScrabbleGame = { createGame, act, publicView, HINT_COST };
+  root.ScrabbleGame = { createGame, act, publicView, upgradeTurn, HINT_COST };
 })(typeof window !== 'undefined' ? window : globalThis);
