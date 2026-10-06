@@ -169,7 +169,12 @@
     switch (msg.t) {
       case 'ping':
         return reply(conn, { t: 'pong' });
+      case 'spectate':
+        if (conn.seat != null) return reply(conn, { t: 'error', msg: 'Un jugador no puede cambiar a espectador desde su asiento.' });
+        conn.spectator = true;
+        return sendState(conn);
       case 'join':
+        if (conn.spectator) return reply(conn, { t: 'error', msg: 'La vista OBS solo permite observar.' });
         return handleJoin(conn, msg);
       case 'leave':
         if (conn.seat != null && seatConn[conn.seat] === conn) {
@@ -179,6 +184,7 @@
         }
         return;
       case 'act': {
+        if (conn.spectator) return reply(conn, { t: 'error', msg: 'La vista OBS solo permite observar.' });
         if (conn.seat == null || seatConn[conn.seat] !== conn) return reply(conn, { t: 'error', msg: 'Primero elige tu asiento.' });
         const res = Game.act(conn.seat, { type: msg.a, tiles: msg.tiles, indices: msg.indices, swapType: !!msg.swapType });
         if (!res.ok) {
@@ -233,7 +239,7 @@
   }
 
   function sendState(conn) {
-    reply(conn, { t: 'state', room: code, you: conn.seat, lobby: lobbyView(), game: Game.publicView(conn.seat) });
+    reply(conn, { t: 'state', room: code, you: conn.seat, spectator: !!conn.spectator, lobby: lobbyView(), game: conn.spectator ? Game.spectatorView() : Game.publicView(conn.seat) });
   }
 
   function scheduleBroadcast() {
@@ -266,6 +272,7 @@
       ];
     }
     const url = Net.controlUrl(code);
+    const obsUrl = Net.spectatorUrl(code);
     return [
       el('div', { class: `room-status ${status.kind}` }, [el('span', { class: 'room-dot' }), status.text]),
       el('div', { class: 'room-code-row' }, [el('span', { class: 'room-code-label', text: 'Código' }), el('strong', { class: 'room-code', text: code })]),
@@ -275,6 +282,11 @@
       el('div', { class: 'room-link' }, [
         el('input', { class: 'room-link-input', attrs: { type: 'text', readonly: true, value: url, 'aria-label': 'Enlace para jugadores' } }),
         el('button', { class: 'btn', text: '📋 Copiar', attrs: { type: 'button' }, on: { click: () => copyLink(url) } }),
+      ]),
+      el('p', { class: 'room-help', text: '🎥 OBS: ambos atriles visibles y cámaras transparentes. Usa este enlace como fuente Navegador y coloca tus cámaras debajo. Mantén abierta esta pantalla.' }),
+      el('div', { class: 'room-link' }, [
+        el('input', { class: 'room-link-input', attrs: { type: 'text', readonly: true, value: obsUrl, 'aria-label': 'Enlace OBS' } }),
+        el('button', { class: 'btn', text: '📋 Copiar OBS', attrs: { type: 'button' }, on: { click: () => copyLink(obsUrl) } }),
       ]),
       compact ? null : el('button', { class: 'btn btn-ghost room-close', text: 'Cerrar sala', attrs: { type: 'button' }, on: { click: closeRoom } }),
     ];

@@ -77,6 +77,25 @@ son las **cámaras** de los jugadores.
 - **Página de cada jugador** (`control.html`): igual, sin cámaras. Arriba,
   los puntos y el tipo de todos; abajo, su atril.
 
+El tipo recomendado aparece en la cámara y en la barra del turno. El atril
+usa ese color en su borde y dedica todo su ancho a las 12 letras. Para
+cambiar también el tipo, marca la casilla dentro de «Cambiar».
+
+## Emitir en OBS
+
+1. Crea una sala desde la pantalla principal o desde **☰ → Sala**.
+2. Pulsa **Copiar OBS** y pega el enlace en una fuente **Navegador** de OBS
+   (por ejemplo, con tamaño **1920 × 1080**).
+3. Coloca las fuentes de tus cámaras debajo de esa fuente: los interiores
+   de los marcos son transparentes, sin croma.
+
+La vista `spectator.html?sala=CODIGO` muestra las fichas de todos los
+jugadores debajo de cada cámara, los puntajes, el turno, el tablero 3D
+(con alternativa 2D si no hay WebGL) y las tarjetas de los Pokémon creados.
+Se actualiza con cada jugada y reconecta automáticamente. No ocupa un
+asiento ni permite jugar. Mantén abierta la pantalla principal. El audio
+sale de esa pantalla para evitar duplicarlo en la emisión.
+
 ## Fichas y mouse
 
 - **Atril:** fichas grandes en la barra de abajo. Se **arrastran al

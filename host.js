@@ -418,6 +418,7 @@
     inGame: () => !!state,
     isPlayerSeat: (seat) => !!state && playerIndex(seat) >= 0 && !state.players[playerIndex(seat)].bot,
     publicView: (seat) => (state ? G.publicView(state, seat) : null),
+    spectatorView: () => (state ? G.spectatorView(state) : null),
     setRemoteSeats(fn) {
       isRemote = fn;
       if (state) render();

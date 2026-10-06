@@ -14,6 +14,7 @@
  *   { t:'act', a:'exchange', indices, swapType }
  *   { t:'act', a:'pass' } · { t:'act', a:'hint' }
  *   { t:'ping' }                              latido (cada PING_MS)
+ *   { t:'spectate' }                          vista OBS sin asiento, con todos los atriles
  *
  * Anfitrión → celular
  *   { t:'state', room, you, lobby, game }     foto tras cada cambio; `game` solo
@@ -75,5 +76,12 @@
     return url.toString();
   }
 
-  window.NetProtocol = { ROOM_PREFIX, CODE_LENGTH, PING_MS, DEAD_MS, newRoomCode, normalizeCode, newToken, isMessage, controlUrl };
+  function spectatorUrl(code) {
+    const url = new URL('spectator.html', window.location.href);
+    url.search = `?sala=${code}`;
+    url.hash = '';
+    return url.toString();
+  }
+
+  window.NetProtocol = { ROOM_PREFIX, CODE_LENGTH, PING_MS, DEAD_MS, newRoomCode, normalizeCode, newToken, isMessage, controlUrl, spectatorUrl };
 })();

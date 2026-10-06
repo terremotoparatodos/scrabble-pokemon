@@ -347,5 +347,13 @@
     };
   }
 
-  root.ScrabbleGame = { createGame, act, publicView, upgradeTurn, HINT_COST };
+  /** Vista de emisión: no ocupa un asiento y muestra todos los atriles. */
+  function spectatorView(state) {
+    const view = publicView(state, null);
+    view.spectator = true;
+    view.players.forEach((p, i) => { p.rack = state.players[i].rack.slice(); });
+    return view;
+  }
+
+  root.ScrabbleGame = { createGame, act, publicView, spectatorView, upgradeTurn, HINT_COST };
 })(typeof window !== 'undefined' ? window : globalThis);

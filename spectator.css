@@ -1,0 +1,22 @@
+/* Emisión OBS: los huecos dejan ver las fuentes de cámara colocadas detrás. */
+html, body.spectator { background: transparent; }
+body.spectator { margin: 0; }
+body.spectator::before, body.spectator::after { display: none; }
+.spectator .cam-slot, .spectator .cam-frame { background: transparent; }
+.spectator .cam-hint { display: none; }
+.spectator .cam-slot { animation: none; }
+.spectator .cam-player { flex: 1; }
+.spectator .stage-layout:not(.duel) .cam-frame { max-height: max(60px, calc((100vh - 4 * var(--gap)) / 2 - 310px)); }
+.spectator .hud-top { justify-content: center; }
+.spectator .hud-turn { order: initial; flex: 1; }
+.spectator .hud-meta { display: inline; }
+.spectator-rack { display: grid; gap: 8px; padding: 10px; border: 3px solid var(--rack-type-color); container-type: inline-size; flex: none; }
+.spectator-rack > strong { color: white; font-size: 0.85rem; text-shadow: 0 1px 0 #573413; }
+.spectator-tiles { --cell: min(54px, calc((100cqw - 20px) / 6)); display: grid; grid-template-columns: repeat(6, var(--cell)); gap: 6px 4px; justify-content: center; }
+.spectator-tile { display: block; aspect-ratio: 1; }
+.spectator .cam-collection { flex: 1; }
+.spectator-wait { position: fixed; inset: 0; display: grid; place-items: center; padding: 24px; }
+.spectator-wait .card { max-width: 560px; display: grid; gap: 14px; text-align: center; }
+.spectator-wait form { display: flex; gap: 8px; }
+.spectator-wait input { min-width: 0; flex: 1; }
+.spectator-connection { position: absolute; bottom: 14px; left: 50%; translate: -50% 0; z-index: 30; padding: 8px 14px; border-radius: 999px; background: #fff3bf; color: #654900; font-weight: 800; }

@@ -218,7 +218,7 @@
       if (exchange) return el('p', { class: 'pp-status', text: exchange.single ? 'Elegí 1 ficha para cambiar sin perder el turno. Disponible una vez por ronda.' : 'Elige las fichas (y/o la ficha de tipo) que vuelven a la bolsa. Cambiar usa tu turno.' });
       const res = preview();
       if (!res) {
-        return el('p', { class: 'pp-status', text: `Crea cualquier Pokémon. ${me().type === R.ANY_TYPE ? 'Comodín: todos dan x2.' : `Recomendado: ${R.typeName(me().type)} (x2 puntos).`}` });
+        return el('p', { class: 'pp-status', text: 'Crea cualquier Pokémon.' });
       }
       if (!res.ok) return el('p', { class: 'pp-status bad', text: `✗ ${res.error}` });
       return el('p', { class: 'pp-status good' }, [BV.sprite(res.entries[0].id, 'mini'), `✓ ${res.entries[0].name} · ${res.score} puntos${res.typeMultiplier === 2 ? ' · x2 por tipo recomendado' : ''}`]);
@@ -248,18 +248,12 @@
             [BV.letterTile(p.rack[i])],
           ),
         );
-      const typeEl = BV.typeTile(p.type, {
-        selected: exchange && exchange.type,
-        onClick: exchange && !exchange.single
-          ? () => {
-              exchange.type = !exchange.type;
-              render();
-            }
-          : null,
-      });
-
       const actions = exchange
         ? [
+            !exchange.single ? el('label', { class: 'menu-check' }, [
+              el('input', { attrs: { type: 'checkbox', checked: exchange.type }, on: { change: (e) => { exchange.type = e.target.checked; render(); } } }),
+              'Cambiar también el tipo',
+            ]) : null,
             button('🔄 Confirmar cambio', () => opts.send({ type: exchange.single ? 'swap-one' : 'exchange', indices: [...exchange.idx], swapType: exchange.type }), 'btn-primary', !exchange.idx.size && !exchange.type),
             button('Cancelar', () => {
               exchange = null;
@@ -293,8 +287,7 @@
         view.hint ? el('p', { class: 'pp-hint' }, [BV.sprite(view.hint.id, 'mini'), `Pista: ${R.DEX[view.hint.id - 1].name} (marcado en el tablero)`]) : null,
       ];
       c.replaceChildren(
-        el('div', { class: `play-panel ${turn ? 'my-turn' : ''}`, style: { '--pc': p.color, '--rack-size': R.RACK_SIZE } }, [
-          typeEl,
+        el('div', { class: `play-panel ${turn ? 'my-turn' : ''}`, style: { '--pc': p.color, '--rack-size': R.RACK_SIZE, '--rack-type-color': R.TYPES[p.type]?.color || '#ffcb05' } }, [
           el('div', { class: 'rack' }, [
             el('div', { class: 'pp-head' }, [
               el('strong', { text: turn ? `¡Tu turno, ${p.name}!` : `Fichas de ${p.name}` }),

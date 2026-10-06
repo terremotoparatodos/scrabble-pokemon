@@ -42,6 +42,24 @@ function put(board, word, r, c, dir) {
   });
 }
 
+test('OBS ve todos los atriles sin alterar la privacidad de los jugadores', () => {
+  const players = [0, 1].map((seat) => ({ seat, name: `Jugador ${seat}`, color: '#e3350d', avatar: 25 }));
+  const state = G.createGame({ players, rounds: 10 }, seeded(42));
+  const obs = G.spectatorView(state);
+  assert.equal(obs.me, -1);
+  assert.equal(obs.spectator, true);
+  assert.equal(obs.hint, null);
+  assert.equal(obs.turnNote, null);
+  assert.equal(obs.bag, undefined);
+  state.players.forEach((p, i) => assert.deepEqual(obs.players[i].rack, p.rack));
+  const original = state.players[0].rack[0];
+  obs.players[0].rack[0] = 'Z';
+  assert.equal(state.players[0].rack[0], original);
+  assert.equal(G.publicView(state, 0).players[1].rack, null);
+  assert.ok(G.publicView(state, 0).players[0].rack);
+  assert.ok(G.publicView(state, null).players.every((p) => p.rack === null));
+});
+
 test('diccionario con los 1025 Pokémon y nombres normalizados', () => {
   assert.equal(R.DEX.length, 1025);
   assert.ok(R.isPokemon('PIKACHU'));

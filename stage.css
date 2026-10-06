@@ -266,27 +266,23 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; }
 .hud-toast.show { animation: toast-in 0.25s ease-out; }
 
 /* ───────── Atril como barra ─────────
-   Angosto: ficha de tipo + fichas arriba; estado y botones abajo.
+   Angosto: fichas arriba; estado y botones abajo.
    Ancho (área de 1000 px o más): todo en una fila. */
 .play-panel {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  grid-template-areas: 'type rack' 'side side';
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas: 'rack' 'side';
   align-items: center;
   gap: 8px 12px;
   padding: 8px 12px;
   background: rgba(255, 255, 255, 0.96);
   backdrop-filter: blur(4px);
 }
-.play-panel .type-tile { grid-area: type; width: auto; min-width: 72px; padding: 6px 8px; }
-.play-panel .type-tile img, .play-panel .type-tile .type-star { width: 26px; height: 26px; font-size: 1.3rem; }
-.play-panel .type-tile strong { font-size: 0.85rem; }
-.play-panel .type-tile small { font-size: 0.6rem; }
-.play-panel .rack { grid-area: rack; display: grid; gap: 4px; padding: 6px 8px 8px; min-width: 0; }
+.play-panel .rack { grid-area: rack; display: grid; gap: 6px; padding: 6px 8px 8px; min-width: 0; border: 3px solid var(--rack-type-color); container-type: inline-size; }
 .play-panel .pp-head { color: #fff; text-shadow: 0 1px 0 rgba(0, 0, 0, 0.35); font-size: 0.85rem; }
 .play-panel .pp-head strong { color: #fff; font-size: 0.9rem; }
 .play-panel .pp-bag { color: rgba(255, 255, 255, 0.9); }
-.play-panel .rack-tiles { --cell: min(54px, 5.2cqw); grid-template-columns: repeat(var(--rack-size, 12), var(--cell)); gap: 4px; }
+.play-panel .rack-tiles { --cell: min(64px, calc((100cqw - 44px) / 12)); grid-template-columns: repeat(var(--rack-size, 12), var(--cell)); gap: 4px; }
 .pp-side { grid-area: side; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; min-width: 0; }
 .pp-side .pp-status { min-height: 0; font-size: 0.88rem; flex: 1 1 220px; }
 .pp-side .pp-note, .pp-side .pp-hint { padding: 3px 8px; font-size: 0.78rem; flex: 1 1 100%; }
@@ -295,9 +291,7 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; }
 .pp-side .pp-actions .pp-main { font-size: 0.92rem; padding: 0.48em 1em; }
 
 @container (min-width: 1000px) {
-  .play-panel { grid-template-columns: auto auto minmax(0, 1fr); grid-template-areas: 'type rack side'; }
-  .play-panel .type-tile { align-self: stretch; }
-  .play-panel .rack-tiles { --cell: min(56px, 3.3cqw); }
+  .play-panel { grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); grid-template-areas: 'rack side'; }
   .pp-side { display: grid; }
 }
 
@@ -357,8 +351,4 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; }
 @media (max-height: 760px) {
   .stage-layout { --camw: clamp(200px, 18vw, 340px); --gap: 10px; }
   .play-panel { padding: 6px 10px; gap: 10px; }
-  .play-panel .rack-tiles { --cell: min(48px, 5.2cqw); }
-}
-@container (max-width: 560px) {
-  .play-panel .rack-tiles { --cell: min(48px, calc((100cqw - 188px) / 12)); }
 }

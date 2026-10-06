@@ -77,6 +77,10 @@
         el('div', { class: 'cam-frame' }, [el('span', { class: 'cam-hint', text: 'Cámara' })]),
         p ? BV.playerPlate(p, opts) : el('div', { class: 'plate empty' }, [el('small', { text: 'Sin jugador' })]),
       ]),
+      p && opts.spectator ? el('section', { class: 'spectator-rack rack', style: { '--rack-type-color': window.ScrabbleRules.TYPES[p.type]?.color || '#ffcb05' }, attrs: { 'aria-label': `Fichas de ${p.name}`, 'data-seat': p.seat } }, [
+        el('strong', { text: `Fichas de ${p.name}` }),
+        el('div', { class: 'spectator-tiles' }, (p.rack || []).map((l) => el('span', { class: 'spectator-tile' }, [BV.letterTile(l)]))),
+      ]) : null,
       p ? collection(p) : null,
     ]);
   }
@@ -85,19 +89,20 @@
    * view: vista pública · isRemote(seat): ¿juega desde otra pantalla?
    * Devuelve los jugadores que quedaron sin cámara (van en las esquinas).
    */
-  function render(view, isRemote) {
+  function render(view, isRemote, options = {}) {
     const layout = $('stageLayout');
     const players = [...view.players].sort((a, b) => a.seat - b.seat);
-    const count = countFor(players.length);
+    const count = options.spectator ? players.length : countFor(players.length);
     layout.dataset.cams = String(count);
     layout.classList.toggle('duel', players.length === 2 && count === 2);
-    layout.classList.toggle('chroma', prefs.chroma);
+    layout.classList.toggle('chroma', !options.spectator && prefs.chroma);
     const optsFor = (p) => {
       const i = view.players.indexOf(p);
       return {
         active: view.phase === 'play' && view.turn === i,
         winner: !!(view.winners && view.winners.includes(i)),
         connected: isRemote(p.seat),
+        spectator: !!options.spectator,
       };
     };
     const withCam = players.slice(0, count);
