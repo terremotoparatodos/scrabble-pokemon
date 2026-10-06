@@ -45,6 +45,8 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; }
 .capture-list { display: grid; gap: 8px; padding: 0; margin: 0; list-style: none; }
 .capture-card { display: flex; align-items: center; gap: 5px; padding: 6px; border: 2px solid color-mix(in srgb, var(--pc) 24%, #fff); border-radius: 12px; background: linear-gradient(110deg, color-mix(in srgb, var(--pc) 8%, #fff), #fff); }
 .capture-card > .sprite { width: 44px; height: 44px; flex: none; }
+.capture-card > .pmd-sprite { object-fit: contain; image-rendering: pixelated; }
+.type-multiplier { font-size: 0.85em; padding-left: 4px; border-left: 1px solid currentColor; }
 .capture-info { min-width: 0; flex: 1; display: grid; gap: 3px; }
 .capture-info > strong { font-size: 0.8rem; overflow-wrap: anywhere; }
 .capture-types { display: flex; gap: 3px; flex-wrap: wrap; }

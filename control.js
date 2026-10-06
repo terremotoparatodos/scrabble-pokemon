@@ -367,7 +367,7 @@
             BV.sprite(p.avatar, 'mini'),
             el('span', { class: 'cs-name', text: i === g.me ? `${p.name} (tú)` : p.name }),
             el('b', { text: p.score }),
-            BV.typeChip(p.type, true),
+            BV.recommendedTypeChip(p.type, true),
           ]),
         ),
         el('span', { class: 'hud-meta', text: `${round}${g.lastRound ? ' · ¡última!' : ''} · 🎒 ${g.bagCount}` }),

@@ -59,7 +59,7 @@
           const entry = window.ScrabbleRules.DEX[capture.id - 1];
           const fresh = previous != null && captures.length > previous && i < captures.length - previous;
           return el('li', { class: `capture-card${fresh ? ' capture-in' : ''}` }, [
-            BV.sprite(capture.id),
+            BV.pmdSprite(capture.id),
             el('div', { class: 'capture-info' }, [
               el('strong', { text: entry.name }),
               el('div', { class: 'capture-types' }, entry.types.map((type) => BV.typeChip(type, true))),

@@ -5,7 +5,7 @@
  * acciones (de su propia pantalla, de los celulares o de los bots) y manda a
  * cada dispositivo publicView(state, asiento), que solo incluye su atril.
  *
- * Turno: jugar (crear un Pokémon del tipo de tu ficha de tipo), cambiar
+ * Turno: jugar (cualquier Pokémon, x2 si coincide con el tipo recomendado), cambiar
  * fichas o pasar. Al empezar cada turno se aplica la regla de oro
  * (ScrabbleMoves.ensurePlayable).
  */
@@ -15,7 +15,7 @@
   const R = root.ScrabbleRules;
   const M = root.ScrabbleMoves;
 
-  const ANY_TYPE_CHANCE = 0.1; // ficha de tipo «Comodín»: vale cualquier tipo
+  const ANY_TYPE_CHANCE = 0.1; // «Comodín»: x2 para cualquier tipo
   const HINT_COST = 5;
   const LOG_MAX = 40;
 
@@ -98,11 +98,7 @@
     // Ya no entra ningún Pokémon en el tablero: la regla de oro no se puede cumplir y la partida termina.
     if (!res.move) return finish(state, 'board');
     p.type = res.type;
-    state.turnNote = res.changed
-      ? res.typeChanged
-        ? `Ningún Pokémon tipo ${R.typeName(res.type)} entraba: nueva ficha de tipo y fichas ajustadas.`
-        : 'La bolsa ajustó tus fichas: hay al menos un Pokémon posible.'
-      : null;
+    state.turnNote = res.changed ? 'La bolsa ajustó tus fichas: hay al menos un Pokémon posible.' : null;
   }
 
   function nextTurn(state, rng) {
@@ -166,8 +162,8 @@
     p.captures.push({ id: entry.id, score: res.score, n: state.moveNo });
     state.used.push(res.word);
     state.passes = 0;
-    state.lastMove = { seat: p.seat, player, id: entry.id, word: res.word, score: res.score, bonus: res.bonus, cells: res.cells.map(({ r, c }) => ({ r, c })), placed: placements.map(({ r, c }) => ({ r, c })), type: p.type };
-    addLog(state, { kind: 'play', player, id: entry.id, score: res.score, type: p.type });
+    state.lastMove = { seat: p.seat, player, id: entry.id, word: res.word, score: res.score, bonus: res.bonus, baseScore: res.baseScore, typeMultiplier: res.typeMultiplier, cells: res.cells.map(({ r, c }) => ({ r, c })), placed: placements.map(({ r, c }) => ({ r, c })), type: p.type };
+    addLog(state, { kind: 'play', player, id: entry.id, score: res.score, type: p.type, typeMultiplier: res.typeMultiplier });
     p.type = drawType(rng);
     refill(p.rack, state.bag);
     nextTurn(state, rng);
@@ -210,7 +206,7 @@
     if (wrong) return { ok: false, error: wrong };
     if (state.hint) return { ok: true, hint: state.hint };
     const p = state.players[player];
-    const move = M.findMoves(state.board, p.rack, p.type, state.used)[0];
+    const move = M.bestMove(state.board, p.rack, p.type, state.used);
     if (!move) return { ok: false, error: 'No se encontró una pista.' };
     p.score -= HINT_COST;
     state.hint = { player, id: R.entriesFor(move.word)[0].id, word: move.word, r: move.r, c: move.c, dir: move.dir };

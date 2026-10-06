@@ -168,8 +168,8 @@
 
   /**
    * Valida fichas puestas este turno.
-   * placements: [{ r, c, l }] · type: tipo obligatorio (o 'any') · used: palabras ya creadas.
-   * Devuelve { ok:false, error } o { ok:true, word, entries, dir, cells, words, score, bonus }.
+   * placements: [{ r, c, l }] · type: tipo recomendado (x2 si coincide, 'any' duplica todos).
+   * Devuelve el puntaje base, el multiplicador de tipo y el puntaje final.
    */
   function validatePlay({ board, placements, type, used }) {
     if (!Array.isArray(placements) || placements.length === 0) return fail('Pon al menos una ficha en el tablero.');
@@ -218,17 +218,16 @@
 
     if (!isPokemon(main.word)) return fail(`«${main.word}» no es un Pokémon.`);
     if ((used || []).includes(main.word)) return fail(`${entriesFor(main.word)[0].name} ya se creó en esta partida.`);
-    if (!wordHasType(main.word, type)) {
-      return fail(`${entriesFor(main.word)[0].name} no es de tipo ${typeName(type)}.`);
-    }
     for (const w of cross) {
       if (!isPokemon(w.word)) return fail(`También se forma «${w.word}», que no es un Pokémon.`);
     }
 
     const words = [main, ...cross].map((w) => ({ word: w.word, cells: w.cells, score: scoreCells(w.cells, isNew) }));
     const bonus = placements.length >= BIG_PLAY_TILES ? BIG_PLAY_BONUS : 0;
-    const score = words.reduce((s, w) => s + w.score, 0) + bonus;
-    return { ok: true, word: main.word, entries: entriesFor(main.word), dir, cells: main.cells, words, score, bonus };
+    const baseScore = words.reduce((s, w) => s + w.score, 0) + bonus;
+    const typeMultiplier = wordHasType(main.word, type) ? 2 : 1;
+    const score = baseScore * typeMultiplier;
+    return { ok: true, word: main.word, entries: entriesFor(main.word), dir, cells: main.cells, words, score, bonus, baseScore, typeMultiplier };
   }
 
   root.ScrabbleRules = {

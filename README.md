@@ -57,8 +57,8 @@ son las **cámaras** de los jugadores.
   En **1v1**, las dos cámaras están arriba de sus columnas laterales. Debajo
   se agregan tarjetas con los Pokémon creados y los puntos de cada jugada;
   el historial se guarda con la partida y permite desplazarse si hay muchas.
-- **Área de juego:** arriba, la barra del turno (quién juega, qué tipo debe
-  crear, ronda y bolsa), el menú ☰, ⟲ (centrar) y ⛶ (pantalla completa).
+- **Área de juego:** arriba, la barra del turno (quién juega, tipo recomendado,
+  ronda y bolsa), el menú ☰, ⟲ (centrar) y ⛶ (pantalla completa).
   Abajo, el atril cuando el jugador en turno juega en esa pantalla.
 - **Nada se superpone:** el tablero (2D o 3D) se encuadra solo en el espacio
   libre que dejan la barra, el atril y las placas (en 3D, la cámara busca la
@@ -114,9 +114,11 @@ las cámaras, sin carteles repetidos sobre los personajes. Alrededor está el
 ## Reglas
 
 - **Atril:** 10 fichas de letra y 1 **ficha de tipo**.
-- **Ficha de tipo:** el Pokémon que crees tiene que ser de ese tipo (vale
-  cualquiera de sus dos tipos). Sale según cuántos Pokémon hay de cada tipo;
-  ★ Comodín (10 %) vale cualquier tipo. Después de jugar se roba otra.
+- **Ficha de tipo recomendado:** puedes crear cualquier Pokémon. Si coincide
+  con el tipo recomendado (cualquiera de sus dos tipos), el puntaje total de
+  la jugada da **x2**, incluidos los multiplicadores del tablero y el bonus
+  por siete fichas. Sale según cuántos Pokémon hay de cada tipo; ★ Comodín
+  (10 %) da x2 a cualquier Pokémon. Después de jugar se roba otra.
 - **Palabras:** nombres sin acentos ni signos (`Mr. Mime` → `MRMIME`,
   `Flabébé` → `FLABEBE`, `Ho-Oh` → `HOOH`). En una sola fila o columna, sin
   huecos. La primera pasa por la Poké Ball del centro; las demás se cruzan o
@@ -127,10 +129,11 @@ las cámaras, sin carteles repetidos sobre los personajes. Alrededor está el
   casillas x2/x3 letra y x2/x3 palabra (solo las que se cubren ese turno),
   +20 por usar 7 fichas o más.
 - **Regla de oro:** al empezar cada turno, la bolsa garantiza que con las
-  fichas del jugador se pueda crear al menos un Pokémon nuevo de su tipo en
-  el tablero. Si no se puede, cambia las fichas justas (vuelven a la bolsa) y,
-  si ningún Pokémon de ese tipo entra, también la ficha de tipo. El atril
-  avisa cuando hubo ajuste.
+  fichas del jugador se pueda crear al menos un Pokémon nuevo en el tablero,
+  de cualquier tipo. Si no se puede, cambia las fichas justas (vuelven a la
+  bolsa). El tipo recomendado no limita las jugadas ni fuerza cambios.
+  El atril avisa cuando hubo ajuste. Bots y pistas comparan las jugadas con
+  el bonus x2 incluido.
 - **Otras acciones:** cambiar fichas y/o la ficha de tipo (usa el turno),
   pasar, o pedir una pista (−5 puntos: muestra un Pokémon posible).
 - **Fin:** al terminar las rondas elegidas, al vaciarse la bolsa (se termina
@@ -179,3 +182,13 @@ los 1025) y los datos de `pokedex.js` vienen de [PokeAPI](https://github.com/Pok
 `models/` (modelos de [Cobblemon](https://cobblemon.tools)) se copiaron de
 Pokémon Party. Las
 imágenes son de Nintendo / Game Freak / The Pokémon Company.
+
+Las tarjetas de **Pokémon creados** usan recursos de
+[PMDCollab / SpriteCollab](https://github.com/PMDCollab/SpriteCollab): primera
+pose frontal de reposo de 980 Pokémon y retratos Normal de PMD para los 45
+que aún no tienen sprite de cuerpo completo. Los archivos se incluyen en
+`assets/pmd/` para que carguen directamente desde Pages. Los
+[créditos por Pokémon](assets/pmd/credits.html), las fuentes exactas y las
+modificaciones están junto a los archivos. Los recursos de la comunidad
+conservan su licencia CC BY-NC 4.0; los oficiales corresponden a Chunsoft y
+a los titulares de Pokémon.

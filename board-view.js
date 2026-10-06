@@ -23,6 +23,10 @@
     return el('img', { class: `sprite ${cls || ''}`, attrs: { src: spriteUrl(id), alt: R.DEX[id - 1] ? R.DEX[id - 1].name : '', loading: 'lazy', draggable: 'false' } });
   }
 
+  function pmdSprite(id) {
+    return el('img', { class: 'sprite pmd-sprite', attrs: { src: `assets/pmd/${id}.png`, alt: R.DEX[id - 1].name, loading: 'lazy', draggable: 'false' } });
+  }
+
   function pokeBall(cls) {
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     svg.setAttribute('viewBox', '0 0 64 64');
@@ -59,6 +63,13 @@
     ]);
   }
 
+  function recommendedTypeChip(type, small) {
+    const chip = typeChip(type, small);
+    chip.title = type === R.ANY_TYPE ? 'x2 para cualquier Pokémon' : `Tipo recomendado: ${R.typeName(type)} · x2 puntos si coincide`;
+    chip.appendChild(el('b', { class: 'type-multiplier', text: 'x2' }));
+    return chip;
+  }
+
   /** Ficha de tipo grande del atril. */
   function typeTile(type, opts) {
     const o = opts || {};
@@ -68,13 +79,13 @@
       {
         class: `type-tile ${any ? 'any' : ''} ${o.selected ? 'selected' : ''}`,
         style: any ? {} : { '--tc': R.TYPES[type].color },
-        attrs: o.onClick ? { type: 'button', 'aria-pressed': String(!!o.selected), title: 'Ficha de tipo' } : { title: 'Ficha de tipo' },
+        attrs: o.onClick ? { type: 'button', 'aria-pressed': String(!!o.selected), title: 'Tipo recomendado · x2 puntos' } : { title: 'Tipo recomendado · x2 puntos' },
         on: o.onClick ? { click: o.onClick } : {},
       },
       [
         any ? el('span', { class: 'type-star', text: '★' }) : el('img', { attrs: { src: typeIconUrl(type), alt: '' } }),
         el('strong', { text: R.typeName(type) }),
-        el('small', { text: any ? 'cualquier tipo' : 'tipo obligatorio' }),
+        el('small', { text: any ? 'todos · x2' : 'recomendado · x2' }),
       ],
     );
   }
@@ -194,7 +205,7 @@
       ]),
       el('div', { class: 'pc-head' }, [
         el('div', { class: 'pc-avatar' }, [sprite(p.avatar)]),
-        el('div', { class: 'pc-id' }, [el('strong', { class: 'pc-name', text: p.name }), typeChip(p.type, true)]),
+        el('div', { class: 'pc-id' }, [el('strong', { class: 'pc-name', text: p.name }), recommendedTypeChip(p.type, true)]),
         el('div', { class: 'pc-score' }, [
           scoreNum,
           el('small', { text: 'pts' }),
@@ -229,7 +240,7 @@
       el('div', { class: 'plate-avatar' }, [sprite(p.avatar)]),
       el('div', { class: 'plate-info' }, [
         el('strong', { class: 'plate-name', text: p.name }),
-        el('div', { class: 'plate-meta' }, [typeChip(p.type, true), el('span', { class: 'plate-count', attrs: { title: 'Fichas en el atril' }, text: `🎒 ${p.rackCount}` }), o.connected ? el('span', { text: '🖥' }) : null, p.bot ? el('span', { text: '🤖' }) : null]),
+        el('div', { class: 'plate-meta' }, [recommendedTypeChip(p.type, true), el('span', { class: 'plate-count', attrs: { title: 'Fichas en el atril' }, text: `🎒 ${p.rackCount}` }), o.connected ? el('span', { text: '🖥' }) : null, p.bot ? el('span', { text: '🤖' }) : null]),
       ]),
       el('div', { class: 'plate-score' }, [scoreNum, el('small', { text: 'pts' }), changed ? el('span', { class: `pc-gain ${diff < 0 ? 'loss' : ''}`, text: diff > 0 ? `+${diff}` : String(diff) }) : null]),
     ]);
@@ -245,7 +256,7 @@
       el('div', { class: 'reveal-sprite' }, [sprite(m.id, 'big')]),
       el('h2', { text: entry.name }),
       el('div', { class: 'reveal-types' }, entry.types.map((t) => typeChip(t))),
-      el('p', { class: 'reveal-score', text: `+${m.score} puntos${m.bonus ? ` (¡bonus de ${m.bonus} por usar ${R.BIG_PLAY_TILES}+ fichas!)` : ''}` }),
+      el('p', { class: 'reveal-score', text: `+${m.score} puntos${m.typeMultiplier === 2 ? ' · x2 por tipo recomendado' : ''}${m.bonus ? ` (¡bonus de ${m.bonus} por usar ${R.BIG_PLAY_TILES}+ fichas!)` : ''}` }),
     ]);
   }
 
@@ -271,5 +282,5 @@
     board: 'No entra ningún Pokémon más en el tablero.',
   };
 
-  window.BoardView = { AVATARS, AVATAR_MODELS, createBoard, playerPlate, letterTile, typeTile, typeChip, playerCard, revealCard, logLine, sprite, pokeBall, END_REASON };
+  window.BoardView = { AVATARS, AVATAR_MODELS, createBoard, playerPlate, letterTile, typeTile, typeChip, recommendedTypeChip, playerCard, revealCard, logLine, sprite, pmdSprite, pokeBall, END_REASON };
 })();

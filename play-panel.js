@@ -183,10 +183,10 @@
       if (exchange) return el('p', { class: 'pp-status', text: 'Elige las fichas (y/o la ficha de tipo) que vuelven a la bolsa. Cambiar usa tu turno.' });
       const res = preview();
       if (!res) {
-        return el('p', { class: 'pp-status', text: `Crea un Pokémon ${me().type === R.ANY_TYPE ? 'de cualquier tipo' : `de tipo ${R.typeName(me().type)}`} cruzando las fichas del tablero.` });
+        return el('p', { class: 'pp-status', text: `Crea cualquier Pokémon. ${me().type === R.ANY_TYPE ? 'Comodín: todos dan x2.' : `Recomendado: ${R.typeName(me().type)} (x2 puntos).`}` });
       }
       if (!res.ok) return el('p', { class: 'pp-status bad', text: `✗ ${res.error}` });
-      return el('p', { class: 'pp-status good' }, [BV.sprite(res.entries[0].id, 'mini'), `✓ ${res.entries[0].name} · ${res.score} puntos`]);
+      return el('p', { class: 'pp-status good' }, [BV.sprite(res.entries[0].id, 'mini'), `✓ ${res.entries[0].name} · ${res.score} puntos${res.typeMultiplier === 2 ? ' · x2 por tipo recomendado' : ''}`]);
     }
 
     function render() {

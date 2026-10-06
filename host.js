@@ -223,7 +223,7 @@
   const localHumans = () => state.players.filter(isLocalHuman).length;
   const curtainUp = (view) => view.me >= 0 && localHumans() > 1 && curtainOpenFor !== turnKey();
 
-  /** Barra de arriba: de quién es el turno, qué tipo debe crear, ronda y bolsa. */
+  /** Barra de arriba: de quién es el turno, tipo recomendado, ronda y bolsa. */
   function renderHudTop(view) {
     const round = view.rounds ? `Ronda ${view.round}/${view.rounds}` : `Ronda ${view.round}`;
     const meta = el('span', { class: 'hud-meta', text: `${round}${view.lastRound ? ' · ¡última!' : ''} · 🎒 ${view.bagCount}` });
@@ -237,7 +237,7 @@
       el('div', { class: 'hud-pill', style: { '--pc': p.color } }, [
         BV.sprite(p.avatar, 'hud-avatar'),
         el('div', { class: 'hud-who' }, [el('small', { text: 'Turno de' }), el('strong', { text: p.name })]),
-        BV.typeChip(p.type, true),
+        BV.recommendedTypeChip(p.type, true),
         why ? el('span', { class: 'hud-why', text: why }) : null,
         meta,
       ]),

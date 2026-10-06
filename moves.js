@@ -1,13 +1,13 @@
 /*
  * Búsqueda de jugadas y la regla de oro: con las fichas de cada jugador
- * SIEMPRE se puede crear al menos un Pokémon nuevo (del tipo de su ficha de
- * tipo) en algún lugar del tablero.
+ * SIEMPRE se puede crear al menos un Pokémon nuevo en algún lugar del tablero.
+ * El tipo recomendado sólo modifica el puntaje; nunca limita las opciones.
  *
  * - placements(): lugares del tablero donde entra cada Pokémon, sin mirar el
  *   atril (qué letras faltarían poner).
  * - findMoves(): de esos lugares, los que se pueden armar con el atril.
- * - ensurePlayable(): si no hay ninguno, cambia las fichas justas (y si hace
- *   falta, la ficha de tipo) para que haya uno. Las fichas que salen vuelven
+ * - ensurePlayable(): si no hay ninguno, cambia las fichas justas
+ *   para que haya uno. Las fichas que salen vuelven
  *   a la bolsa.
  *
  * Por simpleza, las jugadas que se buscan acá no forman palabras cruzadas
@@ -111,7 +111,7 @@
   }
 
   function findMoves(board, rack, type, used) {
-    return placements(board, wordsOfType(type, used)).filter((p) => missingLetters(rack, p.place).length === 0);
+    return placements(board, wordsOfType(R.ANY_TYPE, used)).filter((p) => missingLetters(rack, p.place).length === 0);
   }
 
   function scoreOf(board, move, type, used) {
@@ -147,16 +147,8 @@
     const ready = findMoves(board, rack, type, used);
     if (ready.length) return { type, changed: false, typeChanged: false, move: ready[0] };
 
-    let finalType = type;
-    let options = placements(board, wordsOfType(type, used));
-    if (!options.length) {
-      // Ningún Pokémon de ese tipo entra en el tablero: cambia la ficha de tipo.
-      const viable = R.TYPE_KEYS.map((t) => ({ t, list: placements(board, wordsOfType(t, used)) })).filter((x) => x.list.length);
-      if (!viable.length) return { type, changed: false, typeChanged: false, move: null };
-      const chosen = pick(viable, random);
-      finalType = chosen.t;
-      options = chosen.list;
-    }
+    const options = placements(board, wordsOfType(R.ANY_TYPE, used));
+    if (!options.length) return { type, changed: false, typeChanged: false, move: null };
 
     // Lo que menos fichas cambie; entre esos, uno al azar.
     const scored = options.map((p) => ({ p, missing: missingLetters(rack, p.place) }));
@@ -177,7 +169,7 @@
     out.sort((a, b) => b - a);
     for (const i of out) bag.push(rack.splice(i, 1)[0]);
     for (const l of missing) rack.push(takeFromBag(bag, l));
-    return { type: finalType, changed: true, typeChanged: finalType !== type, move };
+    return { type, changed: true, typeChanged: false, move };
   }
 
   root.ScrabbleMoves = { placements, findMoves, bestMove, ensurePlayable, missingLetters, wordsOfType };

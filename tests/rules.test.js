@@ -63,13 +63,49 @@ test('primera jugada: tiene que pasar por el centro', () => {
   assert.ok(ok.score > 0);
 });
 
-test('la ficha de tipo obliga al tipo', () => {
+test('tipo recomendado: cualquier Pokémon vale, coincidencia x2 y comodín x2', () => {
   const board = R.emptyBoard();
   const placements = [...'PIKACHU'].map((l, k) => ({ r: 7, c: 4 + k, l }));
   const res = R.validatePlay({ board, placements, type: 'fire', used: [] });
-  assert.equal(res.ok, false);
-  assert.match(res.error, /Fuego/);
-  assert.equal(R.validatePlay({ board, placements, type: R.ANY_TYPE, used: [] }).ok, true);
+  assert.equal(res.ok, true);
+  assert.equal(res.typeMultiplier, 1);
+  assert.equal(res.score, res.baseScore);
+  const matching = R.validatePlay({ board, placements, type: 'electric', used: [] });
+  assert.equal(matching.typeMultiplier, 2);
+  assert.equal(matching.score, res.score * 2);
+  assert.equal(matching.baseScore, res.score);
+  assert.equal(matching.bonus, 20);
+  const wildcard = R.validatePlay({ board, placements, type: R.ANY_TYPE, used: [] });
+  assert.equal(wildcard.score, matching.score);
+  const charizard = [...'CHARIZARD'].map((l, k) => ({ r: 7, c: 3 + k, l }));
+  const fire = R.validatePlay({ board, placements: charizard, type: 'fire', used: [] });
+  const flying = R.validatePlay({ board, placements: charizard, type: 'flying', used: [] });
+  assert.equal(fire.score, fire.baseScore * 2);
+  assert.equal(flying.score, fire.score);
+});
+
+test('búsqueda, pista y regla de oro permiten Pokémon fuera del tipo recomendado', () => {
+  const board = R.emptyBoard();
+  const rack = 'MEWXXXXXXX'.split('');
+  const bag = R.newBag();
+  const before = rack.slice();
+  const moves = M.findMoves(board, rack, 'fire', []);
+  assert.ok(moves.some((m) => m.word === 'MEW'));
+  const result = M.ensurePlayable({ board, rack, bag, type: 'fire', used: [], rng: seeded(1) });
+  assert.equal(result.changed, false);
+  assert.equal(result.type, 'fire');
+  assert.deepEqual(rack, before);
+  const best = M.bestMove(board, rack, 'fire', []);
+  assert.equal(best.word, 'MEW');
+  const state = G.createGame({ players: [0, 1].map((seat) => ({seat, name: `J${seat}`, color:'#000', avatar:25})), rounds:10 }, seeded(4));
+  state.players[0].rack = rack;
+  state.players[0].type = 'fire';
+  assert.equal(G.act(state, 0, {type:'hint'}, seeded(5)).hint.word, 'MEW');
+  const tiles = best.place.map(({r,c,l}) => ({r,c,i:rack.indexOf(l)}));
+  const play = G.act(state, 0, {type:'play',tiles}, seeded(6));
+  assert.equal(play.ok, true);
+  assert.equal(play.move.typeMultiplier, 1);
+  assert.equal(state.players[0].score, play.move.baseScore - G.HINT_COST);
 });
 
 test('cruce con el tablero, sin repetir Pokémon', () => {
