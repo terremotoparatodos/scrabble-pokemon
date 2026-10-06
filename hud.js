@@ -123,5 +123,19 @@
     return { close };
   }
 
-  window.GameHud = { watchSafeArea, placeBoard2d, bindFullscreen, bindMenu };
+  /** La página del jugador y la emisión comparten la misma barra de puntajes. */
+  function renderPlayerScores(container, view) {
+    const { el } = window.Dom;
+    const BV = window.BoardView;
+    const round = view.rounds ? `Ronda ${view.round}/${view.rounds}` : `Ronda ${view.round}`;
+    container.replaceChildren(el('div', { class: 'ctrl-scores' }, [
+      ...view.players.map((p, i) => el('div', {
+        class: `ctrl-score ${view.phase === 'play' && view.turn === i ? 'active' : ''} ${i === view.me ? 'mine' : ''}`,
+        style: { '--pc': p.color },
+      }, [BV.sprite(p.avatar, 'mini'), el('span', { class: 'cs-name', text: i === view.me ? `${p.name} (tú)` : p.name }), el('b', { text: p.score }), BV.recommendedTypeChip(p.type, true)])),
+      el('span', { class: 'hud-meta', text: `${round}${view.lastRound ? ' · ¡última!' : ''} · 🎒 ${view.bagCount}` }),
+    ]));
+  }
+
+  window.GameHud = { watchSafeArea, placeBoard2d, bindFullscreen, bindMenu, renderPlayerScores };
 })();

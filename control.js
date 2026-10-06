@@ -377,21 +377,7 @@
   function renderPlay() {
     const g = last.game;
     window.GameAudio.observe(g);
-    // Barra de arriba: todos los jugadores (quién juega, puntos y tipo) y la ronda.
-    const round = g.rounds ? `Ronda ${g.round}/${g.rounds}` : `Ronda ${g.round}`;
-    $('hudTurn').replaceChildren(
-      el('div', { class: 'ctrl-scores' }, [
-        ...g.players.map((p, i) =>
-          el('div', { class: `ctrl-score ${g.phase === 'play' && g.turn === i ? 'active' : ''} ${i === g.me ? 'mine' : ''}`, style: { '--pc': p.color } }, [
-            BV.sprite(p.avatar, 'mini'),
-            el('span', { class: 'cs-name', text: i === g.me ? `${p.name} (tú)` : p.name }),
-            el('b', { text: p.score }),
-            BV.recommendedTypeChip(p.type, true),
-          ]),
-        ),
-        el('span', { class: 'hud-meta', text: `${round}${g.lastRound ? ' · ¡última!' : ''} · 🎒 ${g.bagCount}` }),
-      ]),
-    );
+    window.GameHud.renderPlayerScores($('hudTurn'), g);
     panel.update(g);
     activeBoard().render(g, panel.boardExtra());
     schedulePreview();

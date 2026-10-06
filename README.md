@@ -91,18 +91,23 @@ cambiar también el tipo, marca la casilla dentro de «Cambiar».
    de los marcos son transparentes, sin croma. El resto de la pantalla
    conserva el fondo original y es opaco.
 
-La vista `spectator.html?sala=CODIGO` usa el espacio de los atriles para
-cámaras más altas. Muestra los puntajes, el turno, el tablero 3D
+La vista `spectator.html?sala=CODIGO` conserva las cámaras más altas y
+muestra el mismo atril, estado de jugada y botones del jugador en turno.
+Muestra los puntajes, el turno, el tablero 3D
 (con alternativa 2D si no hay WebGL) y las tarjetas de los Pokémon creados.
 Se actualiza con cada jugada y reconecta automáticamente. No ocupa un
-asiento ni permite jugar. Mantén abierta la pantalla principal. El audio
-sale de esa pantalla para evitar duplicarlo en la emisión.
+asiento ni permite jugar. Mantén abierta la pantalla principal. La emisión
+incluye los sonidos de fichas, pistas, cambios, turnos y capturas. En OBS,
+habilita **Controlar audio vía OBS** en la fuente de navegador;
+en un navegador que bloquee el audio automático, pulsa **Activar sonido**.
 
 En **1v1**, ambos jugadores y el espectador ven el tablero de frente desde
 el mismo lado, con las letras orientadas igual. OBS sigue la vista 2D/3D y
 los ajustes de cámara del jugador en turno; muestra las fichas mientras se
 colocan, se mueven o se retiran, el cursor, las pistas y el puntaje previsto
-antes de confirmar. Los atriles siguen ocultos en la emisión. Las jugadas
+antes de confirmar. El orden, la selección y las fichas usadas del atril
+también se sincronizan, incluyendo el modo cambio y la elección del comodín.
+Solo se revela el atril del jugador en turno. Las jugadas
 en preparación no cambian el tablero ni los puntos de la partida.
 
 ## Fichas y mouse

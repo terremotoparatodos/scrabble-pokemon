@@ -1,7 +1,7 @@
 /* Solo observa el anfitrión: no guarda la partida, ocupa asiento ni envía jugadas. */
 (function () {
   'use strict';
-  const { $, el } = window.Dom;
+  const { $, el, openOverlay, closeOverlay } = window.Dom;
   const BV = window.BoardView;
   const Net = window.NetProtocol;
   let code = Net.normalizeCode(new URLSearchParams(location.search).get('sala'));
@@ -14,9 +14,17 @@
   let board3d = null;
   let cameraSignature = '';
   let safeRect = null;
-  // El audio sale de la pantalla principal, para que OBS no lo duplique.
-  window.GameAudio = { play() {}, observe() {} };
+  let audibleDraft = null;
+  let revealTimer = null;
+  const audio = window.GameAudio;
+  // OBS permite reproducción automática; en otros navegadores se ofrece un gesto.
+  function soundStatus() { $('spectatorSound').hidden = audio.isReady(); }
+  window.addEventListener('game-audio-state', soundStatus);
+  $('spectatorSound').addEventListener('click', () => { audio.setEnabled(true); audio.unlock(); soundStatus(); });
+  audio.unlock();
+  soundStatus();
   const board = BV.createBoard($('boardWrap'), () => {});
+  const panel = window.PlayPanel.create({ container: $('playPanel'), readOnly: true, send() {} });
   // El fondo conserva el diseño original, con recortes solo en las cámaras.
   let backdropQueued = false;
   const backdropObserver = new ResizeObserver(scheduleBackdrop);
@@ -66,22 +74,30 @@
     const g = last?.game;
     $('screenGame').hidden = !g;
     $('spectatorWait').hidden = !!g;
-    if (!g) { shownMove = null; scheduleBackdrop(); return; }
+    if (!g) { shownMove = null; audibleDraft = null; panel.update(null); audio.observe(null); closeOverlay('revealDialog'); scheduleBackdrop(); return; }
+    audio.observe(g);
     window.GameCams.render(g, (seat) => !!last.lobby[seat]?.connected, { spectator: true });
     backdropObserver.disconnect();
     document.querySelectorAll('.cam-frame').forEach((frame) => backdropObserver.observe(frame));
     scheduleBackdrop();
-    const round = g.rounds ? `Ronda ${g.round}/${g.rounds}` : `Ronda ${g.round}`;
-    const meta = el('span', { class: 'hud-meta', text: `${round} · 🎒 ${g.bagCount}` });
-    const p = g.players[g.turn];
-    $('hudTurn').replaceChildren(el('div', { class: 'hud-pill', style: { '--pc': p.color } }, g.phase === 'play' ? [
-      BV.sprite(p.avatar, 'hud-avatar'),
-      el('div', { class: 'hud-who' }, [el('small', { text: 'Turno de' }), el('strong', { text: p.name })]),
-      BV.recommendedTypeChip(p.type, true), meta,
-    ] : [el('strong', { text: `🏆 ${g.winners.map((i) => g.players[i].name).join(' y ')} ${g.winners.length > 1 ? 'empatan' : 'gana'}` }), meta]));
+    window.GameHud.renderPlayerScores($('hudTurn'), g);
+    $('overCard').hidden = g.phase !== 'over';
+    if (g.phase === 'over') {
+      const names = g.winners.map((i) => g.players[i].name);
+      $('overCard').replaceChildren(el('h2', { text: names.length > 1 ? `🏆 ¡Empate entre ${names.join(' y ')}!` : `🏆 ¡Ganó ${names[0]}!` }), el('p', { class: 'muted', text: BV.END_REASON[g.endReason] || '' }));
+    }
     drawBoard();
     if (shownMove == null || g.moveNo < shownMove) shownMove = g.moveNo;
-    if (g.moveNo > shownMove && g.log[0]?.kind === 'play' && g.log[0].n === g.moveNo && board3d && !$('board3dWrap').hidden) board3d.celebrate(g);
+    if (g.moveNo > shownMove && g.log[0]?.kind === 'play' && g.log[0].n === g.moveNo) {
+      if (board3d && !$('board3dWrap').hidden) board3d.celebrate(g);
+      else {
+        audio.play('capture');
+        $('revealBody').replaceChildren(BV.revealCard(g));
+        openOverlay('revealDialog');
+        clearTimeout(revealTimer);
+        revealTimer = setTimeout(() => closeOverlay('revealDialog'), 2600);
+      }
+    }
     shownMove = g.moveNo;
     safeArea.schedule();
   }
@@ -91,6 +107,7 @@
     if (!g) return;
     const draft = last.preview?.key === g.liveKey ? last.preview : null;
     const extra = { ...draft, editable: false };
+    panel.update(g, draft);
     const use3d = !!board3d && draft?.view3d !== false;
     $('board3dWrap').hidden = !use3d;
     $('boardFrame').hidden = use3d;
@@ -99,16 +116,12 @@
       const signature = JSON.stringify([draft.seat, draft.key, draft.camera]);
       if (signature !== cameraSignature) { cameraSignature = signature; board3d.setCameraView(draft.camera); }
     }
-    const pending = draft?.pending || [];
-    const info = $('spectatorPreview');
-    info.replaceChildren();
-    if (pending.length) {
-      const result = window.ScrabbleRules.validatePlay({ board: g.board, placements: pending, type: g.players[g.turn].type, used: g.used });
-      info.textContent = result.ok ? `En preparación: ${result.entries[0].name} · ${result.score} puntos` : `En preparación · ${result.error}`;
-    } else if (draft?.hint) {
-      info.textContent = `💡 Pista: ${window.ScrabbleRules.DEX[draft.hint.id - 1].name}`;
+    if (draft && audibleDraft?.key === draft.key) {
+      const previous = new Set(audibleDraft.pending.map((t) => t.i));
+      draft.pending.filter((t) => !previous.has(t.i)).forEach((_, i) => setTimeout(() => audio.play('tile'), i * 45));
+      if (draft.shuffleNo > (audibleDraft.shuffleNo || 0)) audio.play('exchange');
     }
-    $('hudBottom').hidden = !info.textContent;
+    audibleDraft = draft;
     safeArea.schedule();
   }
 
@@ -152,7 +165,11 @@
     c.on('data', (msg) => {
       if (conn !== c || !Net.isMessage(msg, true)) return;
       lastHeard = Date.now();
-      if (msg.t === 'state' && msg.spectator) { last = msg; status(''); render(); }
+      if (msg.t === 'state' && msg.spectator) {
+        if (!last?.game && msg.game?.phase === 'play') audio.play('start');
+        else if (last?.game?.turn !== msg.game?.turn && msg.game?.phase === 'play') audio.play('turn');
+        last = msg; status(''); render();
+      }
       else if (msg.t === 'preview' && last?.game && msg.preview?.key === last.game.liveKey) { last.preview = msg.preview; drawBoard(); }
     });
     c.on('close', () => { if (conn === c) { conn = null; status('Reconectando con la sala…'); retryLater(); } });
@@ -183,7 +200,7 @@
     $('spectatorCodeForm').hidden = true;
     connect();
   });
-  window.addEventListener('beforeunload', () => { clearTimeout(retryTimer); if (peer) peer.destroy(); });
+  window.addEventListener('beforeunload', () => { clearTimeout(retryTimer); clearTimeout(revealTimer); if (peer) peer.destroy(); });
   $('spectatorCodeForm').hidden = !!code;
   apply3d();
   scheduleBackdrop();

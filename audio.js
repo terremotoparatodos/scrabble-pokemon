@@ -1,7 +1,7 @@
 /* Efectos originales sintetizados: no requieren archivos ni conexión. */
 (function () {
   'use strict';
-  const KEY = 'scrabblePokemon.sound.v1';
+  const KEY = document.body.classList.contains('spectator') ? 'scrabblePokemon.spectator.sound.v1' : 'scrabblePokemon.sound.v1';
   let enabled = true;
   try { enabled = localStorage.getItem(KEY) !== 'off'; } catch { /* Preferencia opcional. */ }
   let context = null;
@@ -17,6 +17,7 @@
         master = context.createGain();
         master.gain.value = 0.22;
         master.connect(context.destination);
+        context.addEventListener('statechange', () => window.dispatchEvent(new Event('game-audio-state')));
       }
       if (context.state === 'suspended') context.resume().catch(() => {});
     } catch { /* El juego también funciona sin audio. */ }
@@ -76,14 +77,20 @@
   }
 
   const control = document.getElementById('soundEnabled');
+  function setEnabled(value) {
+    enabled = !!value;
+    if (master) master.gain.value = enabled ? 0.22 : 0;
+    if (control) control.checked = enabled;
+    try { localStorage.setItem(KEY, enabled ? 'on' : 'off'); } catch { /* Preferencia opcional. */ }
+    if (enabled) unlock();
+    window.dispatchEvent(new Event('game-audio-state'));
+  }
   if (control) {
     control.checked = enabled;
     control.addEventListener('change', () => {
-      enabled = control.checked;
-      if (master) master.gain.value = enabled ? 0.22 : 0;
-      try { localStorage.setItem(KEY, enabled ? 'on' : 'off'); } catch { /* Preferencia opcional. */ }
-      if (enabled) { unlock(); play('tile'); }
+      setEnabled(control.checked);
+      if (enabled) play('tile');
     });
   }
-  window.GameAudio = { play, observe };
+  window.GameAudio = { play, observe, unlock, setEnabled, isReady: () => enabled && context?.state === 'running' };
 })();

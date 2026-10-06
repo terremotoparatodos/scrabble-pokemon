@@ -42,19 +42,25 @@ function put(board, word, r, c, dir) {
   });
 }
 
-test('OBS observa sin asiento y mantiene privados los atriles de todos los jugadores', () => {
+test('OBS sigue el atril del turno actual; los otros atriles siguen privados', () => {
   const players = [0, 1].map((seat) => ({ seat, name: `Jugador ${seat}`, color: '#e3350d', avatar: 25 }));
   const state = G.createGame({ players, rounds: 10 }, seeded(42));
   const obs = G.spectatorView(state);
-  assert.equal(obs.me, -1);
+  assert.equal(obs.me, state.turn);
   assert.equal(obs.spectator, true);
   assert.equal(obs.hint, null);
-  assert.equal(obs.turnNote, null);
+  assert.equal(obs.turnNote, state.turnNote);
   assert.equal(obs.bag, undefined);
-  assert.ok(obs.players.every((p) => p.rack === null));
+  assert.deepEqual(obs.players[state.turn].rack, state.players[state.turn].rack);
+  assert.equal(obs.players[1].rack, null);
   assert.equal(G.publicView(state, 0).players[1].rack, null);
   assert.ok(G.publicView(state, 0).players[0].rack);
   assert.ok(G.publicView(state, null).players.every((p) => p.rack === null));
+  state.turn = 1;
+  const next = G.spectatorView(state);
+  assert.equal(next.me, 1);
+  assert.equal(next.players[0].rack, null);
+  assert.deepEqual(next.players[1].rack, state.players[1].rack);
 });
 
 test('1v1 usa la misma cámara frontal sin importar asiento o jugador propio', () => {
@@ -71,8 +77,9 @@ test('el borrador solo acepta las fichas del turno actual sin modificar la parti
   const live=globalThis.LiveView.clean(state,0,draft,'turn-a');
   assert.equal(live.pending[1].blank,true);
   assert.equal(live.pending[1].l,'E');
-  assert.equal(live.pending[0].i,undefined);
-  assert.equal(live.rack,undefined);
+  assert.equal(live.pending[0].i,0);
+  assert.equal(live.rack[1].l,R.BLANK);
+  assert.ok(live.rack.slice(0,3).every(t=>t.used));
   assert.equal(JSON.stringify(state),before);
   assert.equal(globalThis.LiveView.clean(state,1,draft,'turn-a'),null);
   assert.equal(globalThis.LiveView.clean(state,0,draft,'turn-b'),null);
@@ -86,6 +93,23 @@ test('el borrador solo acepta las fichas del turno actual sin modificar la parti
   state.board[R.idx(7,6)]={l:'M',s:0,m:1};
   assert.equal(globalThis.LiveView.clean(state,0,draft,'turn-a'),null);
   assert.equal(globalThis.LiveView.clean(state,0,{...draft,pending:[],camera:{...draft.camera,zoom:Infinity}},'turn-a'),null);
+});
+
+test('el espejo del atril valida el orden y deriva sus letras del anfitrión', () => {
+  const state=G.createGame({players:[0,1].map(seat=>({seat,name:`J${seat}`,avatar:25,color:'#000'})),rounds:10},seeded(51));
+  const order=state.players[0].rack.map((_,i)=>({i,l:'SPOOF',used:true,selected:i===3})).reverse();
+  const draft={key:'a',view3d:false,pending:[],rack:order,exchange:{indices:[3],single:true,type:false},choosingBlank:true};
+  const before=JSON.stringify(state);
+  const live=globalThis.LiveView.clean(state,0,draft,'a');
+  assert.deepEqual(live.rack.map(t=>t.i),order.map(t=>t.i));
+  assert.deepEqual(live.rack.map(t=>t.l),[...state.players[0].rack].reverse());
+  assert.ok(live.rack.every(t=>!t.used));
+  assert.ok(live.rack.find(t=>t.i===3).selected);
+  assert.deepEqual(live.exchange,draft.exchange);
+  assert.equal(live.choosingBlank,true);
+  assert.equal(JSON.stringify(state),before);
+  for(const rack of [[],[{i:0}],order.map(()=>({i:0})),[...order.slice(1),{i:99}],order.map(t=>({...t,i:t.i+0.5}))])assert.equal(globalThis.LiveView.clean(state,0,{...draft,rack},'a'),null);
+  for(const exchange of [{indices:[0,1],single:true,type:false},{indices:[99],single:false,type:false},{indices:[0,0],single:false,type:false},{indices:[0],single:true,type:true}])assert.equal(globalThis.LiveView.clean(state,0,{...draft,exchange},'a'),null);
 });
 
 test('diccionario con los 1025 Pokémon y nombres normalizados', () => {

@@ -21,7 +21,7 @@
  *   { t:'state', room, you, lobby, game }     foto tras cada cambio; `game` solo
  *                                             incluye el atril de ese asiento
  *   { t:'joined', seat } · { t:'kicked' } · { t:'error', msg } · { t:'pong' }
- *   { t:'preview', preview }                 solo a OBS: borrador validado, sin cambiar la partida
+ *   { t:'preview', preview }                 solo a OBS: borrador, orden y selección del atril validados
  */
 (function () {
   'use strict';

@@ -288,7 +288,7 @@
         el('input', { class: 'room-link-input', attrs: { type: 'text', readonly: true, value: url, 'aria-label': 'Enlace para jugadores' } }),
         el('button', { class: 'btn', text: '📋 Copiar', attrs: { type: 'button' }, on: { click: () => copyLink(url) } }),
       ]),
-      el('p', { class: 'room-help', text: '🎥 OBS sigue al jugador en turno y muestra la jugada mientras la prepara. Cámaras más altas, transparentes por dentro y con el fondo original alrededor. Usa este enlace como fuente Navegador y coloca tus cámaras debajo. Mantén abierta esta pantalla.' }),
+      el('p', { class: 'room-help', text: '🎥 OBS muestra la vista y el atril del jugador en turno, la jugada en preparación y los sonidos. Cámaras más altas, transparentes por dentro y con el fondo original alrededor. Usa este enlace como fuente Navegador, activa su audio en OBS y coloca tus cámaras debajo. Mantén abierta esta pantalla.' }),
       el('div', { class: 'room-link' }, [
         el('input', { class: 'room-link-input', attrs: { type: 'text', readonly: true, value: obsUrl, 'aria-label': 'Enlace OBS' } }),
         el('button', { class: 'btn', text: '📋 Copiar OBS', attrs: { type: 'button' }, on: { click: () => copyLink(obsUrl) } }),

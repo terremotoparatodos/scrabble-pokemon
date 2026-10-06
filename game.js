@@ -347,9 +347,9 @@
     };
   }
 
-  /** Vista de emisión: no ocupa un asiento y conserva los atriles privados. */
+  /** La emisión sigue al jugador en turno, incluyendo únicamente su atril. */
   function spectatorView(state) {
-    const view = publicView(state, null);
+    const view = publicView(state, state.players[state.turn].seat);
     view.spectator = true;
     return view;
   }

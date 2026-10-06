@@ -23,6 +23,7 @@
    * opts.getDropTarget(): tablero activo, para soltar fichas arrastradas
    */
   function create(opts) {
+    const readOnly = !!opts.readOnly;
     let view = null;
     let key = '';
     let order = []; // orden visual del atril (Mezclar), índices reales
@@ -32,6 +33,7 @@
     let exchange = null; // { idx:Set, type:bool } en modo cambio
     let deal = false; // atril nuevo: las fichas entran repartidas
     let chooseBlank = null;
+    let shuffleNo = 0;
     const blankPicker = el('dialog', { class: 'modal card blank-picker', attrs: { 'aria-labelledby': 'blankPickerTitle' } }, [
       el('h2', { text: '★ Comodín de letra', attrs: { id: 'blankPickerTitle' } }),
       el('p', { text: 'Elegí la letra que representará. Esta ficha vale 0 puntos.' }),
@@ -46,7 +48,8 @@
       el('button', { class: 'btn', text: 'Cancelar', attrs: { type: 'button' }, on: { click: () => { chooseBlank = null; blankPicker.close(); } } }),
     ]);
     document.body.appendChild(blankPicker);
-    blankPicker.addEventListener('cancel', () => { chooseBlank = null; });
+    if (readOnly) blankPicker.querySelectorAll('button').forEach((button) => { button.disabled = true; });
+    blankPicker.addEventListener('cancel', (e) => { if (readOnly) e.preventDefault(); else chooseBlank = null; });
     blankPicker.addEventListener('close', changed);
 
     const me = () => (view && view.me >= 0 ? view.players[view.me] : null);
@@ -70,7 +73,7 @@
       if (opts.onChange) opts.onChange();
     }
 
-    function update(next) {
+    function update(next, snapshot) {
       view = next;
       const p = me();
       const nextKey = p ? `${view.moveNo}:${view.turn}:${(p.rack || []).join('')}` : '';
@@ -78,6 +81,15 @@
         key = nextKey;
         reset();
         deal = true;
+      }
+      if (readOnly) {
+        pending = snapshot?.pending || [];
+        cursor = snapshot?.cursor || null;
+        order = snapshot?.rack?.map((t) => t.i) || rack().map((_, i) => i);
+        selected = snapshot?.rack?.find((t) => t.selected)?.i ?? null;
+        exchange = snapshot?.exchange ? { idx: new Set(snapshot.exchange.indices), single: snapshot.exchange.single, type: snapshot.exchange.type } : null;
+        if (snapshot?.choosingBlank && !blankPicker.open) blankPicker.showModal();
+        else if (!snapshot?.choosingBlank && blankPicker.open) blankPicker.close();
       }
       render();
     }
@@ -103,7 +115,7 @@
     }
 
     function tapCell(r, c) {
-      if (!myTurn() || exchange || blankPicker.open) return;
+      if (readOnly || !myTurn() || exchange || blankPicker.open) return;
       const at = pending.findIndex((p) => p.r === r && p.c === c);
       if (at >= 0) {
         pending.splice(at, 1);
@@ -122,14 +134,14 @@
     }
 
     function tapTile(i) {
-      if (blankPicker.open) return;
+      if (readOnly || blankPicker.open) return;
       if (exchange) {
         if (exchange.idx.has(i)) exchange.idx.delete(i);
         else {
           if (exchange.single) exchange.idx.clear();
           exchange.idx.add(i);
         }
-        return render();
+        return changed();
       }
       if (usedIdx().has(i)) return;
       if (cursor && myTurn()) {
@@ -137,7 +149,7 @@
         return changed();
       }
       selected = selected === i ? null : i;
-      render();
+      changed();
     }
 
     function advanceCursor() {
@@ -153,7 +165,7 @@
 
     /** Teclado (solo en pantallas con teclado): letras, Retroceso, Enter, Escape. */
     function onKey(e) {
-      if (!view || !myTurn() || exchange || blankPicker.open || e.ctrlKey || e.metaKey || e.altKey) return false;
+      if (readOnly || !view || !myTurn() || exchange || blankPicker.open || e.ctrlKey || e.metaKey || e.altKey) return false;
       if (e.target && /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) return false;
       const k = e.key.length === 1 ? R.normalize(e.key) : '';
       if (k && cursor) {
@@ -196,17 +208,18 @@
     }
 
     function shuffle() {
+      shuffleNo++;
       for (let i = order.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [order[i], order[j]] = [order[j], order[i]];
       }
       window.GameAudio?.play('exchange');
-      render();
+      changed();
     }
 
     // ── Dibujo ──
     function button(label, onClick, cls, disabled) {
-      return el('button', { class: `btn ${cls || ''}`, text: label, attrs: { type: 'button', disabled: !!disabled }, on: { click: onClick } });
+      return el('button', { class: `btn ${cls || ''}`, text: label, attrs: { type: 'button', disabled: !!disabled }, on: readOnly ? {} : { click: onClick } });
     }
 
     function statusLine() {
@@ -243,7 +256,7 @@
               style: deal ? { '--deal-delay': `${pos * 45}ms` } : {},
               class: `rack-slot ${deal ? 'deal' : ''} ${used.has(i) ? 'used' : ''} ${selected === i ? 'selected' : ''} ${exchange && exchange.idx.has(i) ? 'marked' : ''}`,
               attrs: { type: 'button', disabled: used.has(i), 'data-i': i, 'aria-label': p.rack[i] === R.BLANK ? 'Ficha comodín de letra' : `Ficha ${p.rack[i]}`, title: p.rack[i] === R.BLANK ? 'Comodín: cualquier letra · 0 puntos' : turn ? 'Arrástrala al tablero' : '' },
-              on: { click: () => tapTile(i) },
+              on: readOnly ? {} : { click: () => tapTile(i) },
             },
             [BV.letterTile(p.rack[i])],
           ),
@@ -251,13 +264,13 @@
       const actions = exchange
         ? [
             !exchange.single ? el('label', { class: 'menu-check' }, [
-              el('input', { attrs: { type: 'checkbox', checked: exchange.type }, on: { change: (e) => { exchange.type = e.target.checked; render(); } } }),
+              el('input', { attrs: { type: 'checkbox', checked: exchange.type }, on: readOnly ? {} : { change: (e) => { exchange.type = e.target.checked; changed(); } } }),
               'Cambiar también el tipo',
             ]) : null,
             button('🔄 Confirmar cambio', () => opts.send({ type: exchange.single ? 'swap-one' : 'exchange', indices: [...exchange.idx], swapType: exchange.type }), 'btn-primary', !exchange.idx.size && !exchange.type),
             button('Cancelar', () => {
               exchange = null;
-              render();
+              changed();
             }),
           ]
         : [
@@ -316,7 +329,7 @@
       if (opts.onChange) opts.onChange();
     }
 
-    const rackDrag = window.RackDrag.create({
+    const rackDrag = readOnly ? null : window.RackDrag.create({
       root: opts.container,
       canDrag: () => canEdit(),
       getTarget: () => (opts.getDropTarget ? opts.getDropTarget() : null),
@@ -326,7 +339,7 @@
     });
 
     // ── Fichas puestas (arrastre en el tablero) ──
-    const canEdit = () => myTurn() && !exchange && !blankPicker.open;
+    const canEdit = () => !readOnly && myTurn() && !exchange && !blankPicker.open;
     const freeCell = (r, c) => R.inBounds(r, c) && !occupied(r, c);
 
     /** Suelta la ficha i del atril en (r, c). */
@@ -365,11 +378,14 @@
         cursor,
         hint: view && view.hint,
         rack: order.filter((i) => i < rack().length).map((i) => ({ i, l: rack()[i], used: used.has(i), selected: selected === i })),
+        exchange: exchange ? { indices: [...exchange.idx], type: exchange.type, single: !!exchange.single } : null,
+        choosingBlank: blankPicker.open,
+        shuffleNo,
         editable: canEdit(),
       };
     }
 
-    return { update, tapCell, tapTile, onKey, placeAt, movePending, removeAt, boardExtra, isOverRack: (x, y) => rackDrag.isOver(x, y) };
+    return { update, tapCell, tapTile, onKey, placeAt, movePending, removeAt, boardExtra, isOverRack: (x, y) => !!rackDrag && rackDrag.isOver(x, y) };
   }
 
   window.PlayPanel = { create };

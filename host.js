@@ -166,7 +166,7 @@
   function presentationView() {
     if (!state) return null;
     const draft = livePreview?.key === liveKey ? livePreview : { key: liveKey, seat: current().seat, pending: [], cursor: null, view3d: has3d(), camera: { alt: false, yaw: 0, pitch: 0, zoom: 1, pan: { x: 0, z: 0 } } };
-    return { ...draft, hint: state.hint?.player === state.turn ? state.hint : null };
+    return { ...draft, rack: draft.rack || current().rack.map((l, i) => ({ i, l, used: false, selected: false })), hint: state.hint?.player === state.turn ? state.hint : null };
   }
 
   function receivePreview(seat, input) {

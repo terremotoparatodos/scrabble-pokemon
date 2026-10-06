@@ -20,4 +20,6 @@ body.spectator::before, body.spectator::after { display: none; }
 .spectator-wait form { display: flex; gap: 8px; }
 .spectator-wait input { min-width: 0; flex: 1; }
 .spectator-connection { position: absolute; bottom: 14px; left: 50%; translate: -50% 0; z-index: 30; padding: 8px 14px; border-radius: 999px; background: #fff3bf; color: #654900; font-weight: 800; }
-.spectator-preview { margin: 0; padding: 10px 16px; border-radius: 14px; background: rgba(255, 255, 255, 0.96); border: 2px solid var(--line); box-shadow: var(--shadow-sm); font-size: 0.9rem; font-weight: 700; text-align: center; }
+.spectator #playPanel { pointer-events: none; }
+.spectator #playPanel button, .spectator .blank-picker button { cursor: default; }
+.spectator #spectatorSound { white-space: nowrap; font-size: 0.75rem; }
