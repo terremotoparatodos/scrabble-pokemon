@@ -281,7 +281,13 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; }
 .play-panel .rack { grid-area: rack; display: grid; gap: 6px; padding: 6px 8px 8px; min-width: 0; border: 3px solid var(--rack-type-color); container-type: inline-size; }
 .play-panel .pp-head { color: #fff; text-shadow: 0 1px 0 rgba(0, 0, 0, 0.35); font-size: 0.85rem; }
 .play-panel .pp-head strong { color: #fff; font-size: 0.9rem; }
+.play-panel .pp-head { align-items: center; }
+.pp-owner { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 8px; min-width: 0; }
+.rack-type-hint { display: inline-flex; flex: none; }
+.rack-type-hint .type-chip { font-size: 0.65rem; padding: 2px 6px; gap: 3px; white-space: nowrap; }
+.rack-type-hint .type-chip img, .rack-type-hint .type-star { width: 13px; height: 13px; font-size: 0.7rem; }
 .play-panel .pp-bag { color: rgba(255, 255, 255, 0.9); }
+.play-panel .pp-bag { flex: none; white-space: nowrap; }
 .play-panel .rack-tiles { --cell: min(64px, calc((100cqw - 44px) / 12)); grid-template-columns: repeat(var(--rack-size, 12), var(--cell)); gap: 4px; }
 .pp-side { grid-area: side; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; min-width: 0; }
 .pp-side .pp-status { min-height: 0; font-size: 0.88rem; flex: 1 1 220px; }

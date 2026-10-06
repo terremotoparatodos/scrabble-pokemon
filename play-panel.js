@@ -290,7 +290,10 @@
         el('div', { class: `play-panel ${turn ? 'my-turn' : ''}`, style: { '--pc': p.color, '--rack-size': R.RACK_SIZE, '--rack-type-color': R.TYPES[p.type]?.color || '#ffcb05' } }, [
           el('div', { class: 'rack' }, [
             el('div', { class: 'pp-head' }, [
-              el('strong', { text: turn ? `¡Tu turno, ${p.name}!` : `Fichas de ${p.name}` }),
+              el('div', { class: 'pp-owner' }, [
+                el('strong', { text: turn ? `¡Tu turno, ${p.name}!` : `Fichas de ${p.name}` }),
+                el('span', { class: 'rack-type-hint' }, [BV.recommendedTypeChip(p.type, true)]),
+              ]),
               el('span', { class: 'pp-bag', text: `🎒 Bolsa: ${view.bagCount}` }),
             ]),
             el('div', { class: 'rack-tiles' }, tiles),

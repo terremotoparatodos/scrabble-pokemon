@@ -77,8 +77,9 @@ son las **cámaras** de los jugadores.
 - **Página de cada jugador** (`control.html`): igual, sin cámaras. Arriba,
   los puntos y el tipo de todos; abajo, su atril.
 
-El tipo recomendado aparece en la cámara y en la barra del turno. El atril
-usa ese color en su borde y dedica todo su ancho a las 12 letras. Para
+El tipo recomendado aparece en la cámara, en la barra del turno y en una
+etiqueta pequeña sobre las letras del atril. El atril usa ese color en su
+borde y dedica todo su ancho a las 12 letras. Para
 cambiar también el tipo, marca la casilla dentro de «Cambiar».
 
 ## Emitir en OBS

@@ -11,7 +11,8 @@ body.spectator::before, body.spectator::after { display: none; }
 .spectator .hud-turn { order: initial; flex: 1; }
 .spectator .hud-meta { display: inline; }
 .spectator-rack { display: grid; gap: 8px; padding: 10px; border: 3px solid var(--rack-type-color); container-type: inline-size; flex: none; }
-.spectator-rack > strong { color: white; font-size: 0.85rem; text-shadow: 0 1px 0 #573413; }
+.spectator-rack-head { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 8px; }
+.spectator-rack-head > strong { color: white; font-size: 0.85rem; text-shadow: 0 1px 0 #573413; }
 .spectator-tiles { --cell: min(54px, calc((100cqw - 20px) / 6)); display: grid; grid-template-columns: repeat(6, var(--cell)); gap: 6px 4px; justify-content: center; }
 .spectator-tile { display: block; aspect-ratio: 1; }
 .spectator .cam-collection { flex: 1; }
