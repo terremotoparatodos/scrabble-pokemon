@@ -11,7 +11,7 @@
   }
 
   function pack(view, extra, view3d, camera) {
-    return { key: view.liveKey, pending: extra.pending || [], cursor: extra.cursor || null, rack: extra.rack || null, exchange: extra.exchange || null, choosingBlank: !!extra.choosingBlank, view3d: !!view3d, camera: camera || null };
+    return { key: view.liveKey, pending: extra.pending || [], cursor: extra.cursor || null, rack: extra.rack || null, exchange: extra.exchange || null, choosingBlank: !!extra.choosingBlank, cluesOpen: !!extra.cluesOpen, view3d: !!view3d, camera: camera || null };
   }
 
   function clean(state, seat, input, key) {
@@ -45,6 +45,7 @@
       rack: order.map((t) => ({ i: t.i, l: p.rack[t.i], used: indices.has(t.i), selected: !!t.selected })),
       exchange: exchange ? { indices: [...exchange.indices], single: exchange.single, type: exchange.type } : null,
       choosingBlank: !!input.choosingBlank,
+      cluesOpen: !!input.cluesOpen,
       cursor: cursor ? { r: cursor.r, c: cursor.c, dir: cursor.dir } : null,
       view3d: input.view3d,
       camera: camera ? { alt: camera.alt, yaw: camera.yaw, pitch: camera.pitch, zoom: camera.zoom, pan: { x: camera.pan.x, z: camera.pan.z } } : null,

@@ -18,7 +18,7 @@
   const ANY_TYPE_CHANCE = 0.1; // «Comodín»: x2 para cualquier tipo
   const HINT_COST = 5;
   const LOG_MAX = 40;
-  const TURN_POLICY_VERSION = 4;
+  const TURN_POLICY_VERSION = 5;
 
   // Las fichas de tipo salen según cuántos Pokémon hay de cada tipo.
   const TYPE_WEIGHTS = R.TYPE_KEYS.map((t) => [t, R.DEX.filter((e) => e.types.includes(t)).length]);
@@ -80,6 +80,8 @@
       lastMove: null,
       turnNote: null,
       hint: null,
+      guide: null,
+      optionCount: 0,
       log: [],
     };
     for (const p of state.players) refill(p.rack, bag);
@@ -96,13 +98,15 @@
   function startTurn(state, rng) {
     const p = state.players[state.turn];
     state.hint = null;
-    const res = M.ensurePlayable({ board: state.board, rack: p.rack, bag: state.bag, type: p.type, used: state.used, rng });
+    state.guide = null;
+    const res = M.ensurePlayable({ board: state.board, rack: p.rack, bag: state.bag, type: p.type, used: state.used, rng, target: R.TARGET_OPTIONS });
     state.turnPolicyVersion = TURN_POLICY_VERSION;
     // El tablero debe permitir tres nombres distintos con un mismo atril.
     if (!res.move) return finish(state, res.reason);
     p.type = res.type;
+    state.optionCount = res.optionCount;
     state.turnNote = res.changed
-      ? 'La bolsa ajustó tus fichas: hay al menos 3 Pokémon distintos posibles y uno coincide con el tipo recomendado.'
+      ? `La bolsa ajustó tus fichas: hay ${res.optionCount} Pokémon distintos posibles y un x2 disponible.`
       : res.typeChanged ? 'El tipo recomendado se ajustó para que puedas aprovechar el x2 con tus fichas.' : null;
   }
 
@@ -118,7 +122,7 @@
       shuffle(state.bag, rng || Math.random);
     }
     const hadHint = !!state.hint;
-    // Las partidas guardadas pasan de diez a doce fichas sin perder progreso.
+    // Las partidas guardadas amplían el atril sin perder puntos ni rondas.
     for (const p of state.players) refill(p.rack, state.bag);
     startTurn(state, rng);
     if (hadHint && state.phase === 'play') {
@@ -134,6 +138,57 @@
     const p = state.players[state.turn];
     const move = M.bestMove(state.board, p.rack, p.type, state.used);
     state.hint = { player: state.turn, id: R.entriesFor(move.word)[0].id, word: move.word, r: move.r, c: move.c, dir: move.dir };
+  }
+
+  /** Tres objetivos privados y válidos; la vista pública sólo recibe datos pedidos. */
+  function refreshGuide(state, rng) {
+    const p = state.players[state.turn];
+    const moves = M.findMoves(state.board, p.rack, p.type, state.used);
+    const words = [...new Set(moves.map((m) => m.word))];
+    state.optionCount = words.length;
+    const old = state.guide || [];
+    const reserved = new Set(old.filter((t) => t && words.includes(t.word)).map((t) => t.word));
+    const chosen = new Set();
+    const random = rng || Math.random;
+    state.guide = Array.from({ length: 3 }, (_, slot) => {
+      const previous = old[slot];
+      if (previous && words.includes(previous.word) && !chosen.has(previous.word)) { chosen.add(previous.word); return previous; }
+      let pool = words.filter((w) => !chosen.has(w) && !reserved.has(w));
+      if (slot === 0) {
+        const matching = pool.filter((w) => R.wordHasType(w, p.type));
+        if (matching.length) pool = matching;
+      }
+      if (!pool.length) return null;
+      const word = pool[Math.floor(random() * pool.length)];
+      chosen.add(word);
+      const entry = R.entriesFor(word).find((e) => e.types.includes(p.type)) || R.entriesFor(word)[0];
+      return { word, id: entry.id, revealed: [] };
+    });
+  }
+
+  function clue(state, player, slot, detail, rng) {
+    const wrong = checkTurn(state, player);
+    if (wrong) return { ok: false, error: wrong };
+    if (!Number.isInteger(slot) || slot < 0 || slot > 2 || !['generation', 'types', 'initial'].includes(detail)) return { ok: false, error: 'Pista inválida.' };
+    refreshGuide(state, rng);
+    const target = state.guide[slot];
+    if (!target) return { ok: false, error: 'No hay una pista disponible.' };
+    if (!target.revealed.includes(detail)) target.revealed.push(detail);
+    return { ok: true };
+  }
+
+  function clueView(state, me) {
+    if (state.phase !== 'play' || me !== state.turn) return null;
+    return Array.from({ length: 3 }, (_, slot) => {
+      const target = state.guide?.[slot];
+      const entry = target ? R.DEX[target.id - 1] : null;
+      const shown = (detail) => target?.revealed.includes(detail);
+      return {
+        generation: shown('generation') ? R.generationOf(entry.id) : null,
+        types: shown('types') ? [...entry.types] : null,
+        initial: shown('initial') ? entry.word[0] : null,
+      };
+    });
   }
 
   function nextTurn(state, rng) {
@@ -154,6 +209,7 @@
     state.phase = 'over';
     state.endReason = reason;
     state.hint = null;
+    state.guide = null;
     state.turnNote = null;
     const top = Math.max(...state.players.map((p) => p.score));
     state.winners = state.players.map((p, i) => (p.score === top ? i : -1)).filter((i) => i >= 0);
@@ -261,8 +317,10 @@
     p.singleSwapRound = state.round;
     const res = M.ensurePlayable({board:state.board, rack:p.rack, bag:state.bag, type:p.type, used:state.used, rng});
     p.type = res.type;
+    state.optionCount = res.optionCount;
     state.turnNote = 'Cambiaste 1 ficha sin perder el turno. El próximo cambio gratis se habilita en la siguiente ronda.';
     refreshHint(state);
+    if (state.guide) refreshGuide(state, rng);
     state.moveNo++;
     addLog(state, {kind:'swap-one', player, count:1});
     return {ok:true};
@@ -304,6 +362,8 @@
         return pass(state, player, rng);
       case 'hint':
         return hint(state, player);
+      case 'clue':
+        return clue(state, player, action.slot, action.detail, rng);
       default:
         return { ok: false, error: 'Acción desconocida.' };
     }
@@ -344,6 +404,8 @@
       })),
       turnNote: me === state.turn ? state.turnNote : null,
       hint: state.hint && state.hint.player === me ? state.hint : null,
+      clues: clueView(state, me),
+      optionCount: me === state.turn ? state.optionCount : null,
     };
   }
 

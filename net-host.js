@@ -194,7 +194,7 @@
       case 'act': {
         if (conn.spectator) return reply(conn, { t: 'error', msg: 'La vista OBS solo permite observar.' });
         if (conn.seat == null || seatConn[conn.seat] !== conn) return reply(conn, { t: 'error', msg: 'Primero elige tu asiento.' });
-        const res = Game.act(conn.seat, { type: msg.a, tiles: msg.tiles, indices: msg.indices, swapType: !!msg.swapType });
+        const res = Game.act(conn.seat, { type: msg.a, tiles: msg.tiles, indices: msg.indices, swapType: !!msg.swapType, slot: msg.slot, detail: msg.detail });
         if (!res.ok) {
           reply(conn, { t: 'error', msg: res.error });
           sendState(conn); // re-sincroniza por si el celular iba atrasado

@@ -33,6 +33,23 @@
     let exchange = null; // { idx:Set, type:bool } en modo cambio
     let deal = false; // atril nuevo: las fichas entran repartidas
     let chooseBlank = null;
+    let cluesOpen = false;
+    const clueBody = el('div', { class: 'clue-cards' });
+    const clueDialog = el('div', { class: 'overlay in-area clue-overlay', attrs: { id: 'clueDialog', hidden: true, role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'cluePickerTitle', inert: readOnly } }, [
+      el('section', { class: 'card clue-picker' }, [
+        el('div', { class: 'clue-head' }, [el('h2', { text: '💡 Pistas gratis', attrs: { id: 'cluePickerTitle' } }), el('button', { class: 'hud-btn', text: '✕', attrs: { type: 'button', 'aria-label': 'Cerrar pistas' }, on: readOnly ? {} : { click: () => { cluesOpen = false; changed(); } } })]),
+        el('p', { class: 'muted', text: 'Cada tarjeta corresponde a un Pokémon distinto que podés jugar. Elegí qué dato descubrir; no cuesta puntos.' }),
+        clueBody,
+      ]),
+    ]);
+    (opts.container.closest('.play-area') || document.body).appendChild(clueDialog);
+    document.addEventListener('keydown', (e) => {
+      if (!cluesOpen || e.key !== 'Escape' || readOnly) return;
+      cluesOpen = false;
+      changed();
+      e.preventDefault();
+      e.stopImmediatePropagation();
+    });
     const blankPicker = el('dialog', { class: 'modal card blank-picker', attrs: { 'aria-labelledby': 'blankPickerTitle' } }, [
       el('h2', { text: '★ Comodín de letra', attrs: { id: 'blankPickerTitle' } }),
       el('p', { text: 'Elegí la letra que representará. Esta ficha vale 0 puntos.' }),
@@ -64,6 +81,7 @@
       pending = [];
       cursor = null;
       exchange = null;
+      cluesOpen = false;
       order = rack().map((_, i) => i);
     }
 
@@ -87,6 +105,7 @@
         order = snapshot?.rack?.map((t) => t.i) || rack().map((_, i) => i);
         selected = snapshot?.rack?.find((t) => t.selected)?.i ?? null;
         exchange = snapshot?.exchange ? { idx: new Set(snapshot.exchange.indices), single: snapshot.exchange.single, type: snapshot.exchange.type } : null;
+        cluesOpen = !!snapshot?.cluesOpen;
         if (snapshot?.choosingBlank && !blankPicker.open) blankPicker.showModal();
         else if (!snapshot?.choosingBlank && blankPicker.open) blankPicker.close();
       }
@@ -114,7 +133,7 @@
     }
 
     function tapCell(r, c) {
-      if (readOnly || !myTurn() || exchange || blankPicker.open) return;
+      if (readOnly || cluesOpen || !myTurn() || exchange || blankPicker.open) return;
       const at = pending.findIndex((p) => p.r === r && p.c === c);
       if (at >= 0) {
         pending.splice(at, 1);
@@ -133,7 +152,7 @@
     }
 
     function tapTile(i) {
-      if (readOnly || blankPicker.open) return;
+      if (readOnly || cluesOpen || blankPicker.open) return;
       if (exchange) {
         if (exchange.idx.has(i)) exchange.idx.delete(i);
         else {
@@ -164,7 +183,7 @@
 
     /** Teclado (solo en pantallas con teclado): letras, Retroceso, Enter, Escape. */
     function onKey(e) {
-      if (readOnly || !view || !myTurn() || exchange || blankPicker.open || e.ctrlKey || e.metaKey || e.altKey) return false;
+      if (readOnly || cluesOpen || !view || !myTurn() || exchange || blankPicker.open || e.ctrlKey || e.metaKey || e.altKey) return false;
       if (e.target && /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) return false;
       const k = e.key.length === 1 ? R.normalize(e.key) : '';
       if (k && cursor) {
@@ -237,6 +256,7 @@
     }
 
     function render() {
+      renderClues();
       const c = opts.container;
       const p = me();
       if (!view || !p || !p.rack) {
@@ -291,7 +311,8 @@
               changed();
             }, '', !turn),
             button('⏭ Pasar', () => opts.send({ type: 'pass' }), '', !turn),
-            button(view.hint ? '💡 Usada' : '💡 Pista −5', () => opts.send({ type: 'hint' }), '', !turn || !!view.hint),
+            button('💡 Pistas gratis', () => { cluesOpen = true; changed(); }, '', !turn),
+            button(view.hint ? '🔎 Revelada' : '🔎 Revelar −5', () => opts.send({ type: 'hint' }), '', !turn || !!view.hint),
           ];
 
       const notes = [
@@ -305,6 +326,7 @@
               el('div', { class: 'pp-owner' }, [
                 el('strong', { text: turn ? `¡Tu turno, ${p.name}!` : `Fichas de ${p.name}` }),
                 el('span', { class: 'rack-type-hint' }, [BV.recommendedTypeChip(p.type, true)]),
+                turn && Number.isInteger(view.optionCount) ? el('small', { class: 'rack-options', text: `${view.optionCount} Pokémon posibles` }) : null,
               ]),
               el('span', { class: 'pp-bag', text: `🎒 Bolsa: ${view.bagCount}` }),
             ]),
@@ -314,6 +336,25 @@
         ]),
       );
       deal = false;
+    }
+
+    function renderClues() {
+      clueDialog.hidden = !cluesOpen;
+      clueDialog.classList.toggle('show', cluesOpen);
+      if (!cluesOpen || !view) return;
+      const roman = ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX'];
+      clueBody.replaceChildren(...Array.from({ length: 3 }, (_, slot) => {
+        const clue = view.clues?.[slot] || {};
+        const labels = { generation: clue.generation ? `Generación ${roman[clue.generation]}` : 'Generación', types: clue.types ? clue.types.map(R.typeName).join(' / ') : 'Tipo', initial: clue.initial ? `Empieza con ${clue.initial}` : 'Inicial' };
+        return el('section', { class: 'clue-card', attrs: { 'data-clue': slot } }, [
+          el('h3', { text: `Pokémon ${slot + 1}` }),
+          el('div', { class: 'clue-details' }, Object.entries(labels).map(([detail, label]) => el('button', {
+            class: `btn ${clue[detail] ? 'clue-revealed' : ''}`, text: label,
+            attrs: { type: 'button', disabled: !!clue[detail], 'aria-label': `${detail === 'generation' ? 'Generación' : detail === 'types' ? 'Tipo' : 'Inicial'} del Pokémon ${slot + 1}`, 'data-detail': detail },
+            on: readOnly ? {} : { click: () => opts.send({ type: 'clue', slot, detail }) },
+          }))),
+        ]);
+      }));
     }
 
     /** Reordena el atril: la ficha i pasa a la posición pos (entre las visibles). */
@@ -338,7 +379,7 @@
     });
 
     // ── Fichas puestas (arrastre en el tablero) ──
-    const canEdit = () => !readOnly && myTurn() && !exchange && !blankPicker.open;
+    const canEdit = () => !readOnly && !cluesOpen && myTurn() && !exchange && !blankPicker.open;
     const freeCell = (r, c) => R.inBounds(r, c) && !occupied(r, c);
 
     /** Suelta la ficha i del atril en (r, c). */
@@ -379,6 +420,7 @@
         rack: order.filter((i) => i < rack().length).map((i) => ({ i, l: rack()[i], used: used.has(i), selected: selected === i })),
         exchange: exchange ? { indices: [...exchange.idx], type: exchange.type, single: !!exchange.single } : null,
         choosingBlank: blankPicker.open,
+        cluesOpen,
         editable: canEdit(),
       };
     }

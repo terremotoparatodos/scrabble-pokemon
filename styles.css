@@ -361,7 +361,7 @@ button.type-tile { cursor: pointer; }
 .pp-note { background: #f3f0ff; color: #5f3dc4; }
 .pp-hint { background: #fff9db; color: #8a5a00; }
 .rack { display: flex; gap: 10px; align-items: stretch; }
-.rack-tiles { flex: 1; display: grid; grid-template-columns: repeat(var(--rack-size, 12), var(--cell)); justify-content: center; align-content: center; gap: 5px; --cell: min(52px, calc((min(100vw, var(--bw) + 40px) - 230px) / 12)); }
+.rack-tiles { flex: 1; display: grid; grid-template-columns: repeat(var(--rack-size, 14), var(--cell)); justify-content: center; align-content: center; gap: 5px; --cell: min(52px, calc((min(100vw, var(--bw) + 40px) - 230px) / var(--rack-size, 14))); }
 .rack-slot { padding: 0; border: 0; background: transparent; aspect-ratio: 1; cursor: pointer; border-radius: 6px; }
 .rack-slot.used { opacity: 0.2; cursor: default; }
 .rack-slot.selected .tile { transform: translateY(-5px); box-shadow: 0 0 0 3px #4c6ef5, 0 5px 0 #b08d43; }

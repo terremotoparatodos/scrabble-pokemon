@@ -74,14 +74,16 @@
     const i = playerIndex(seat);
     if (i < 0) return { ok: false, error: 'Ese asiento no juega en esta partida.' };
     const res = G.act(state, i, action, Math.random);
-    if (res.ok) changed();
+    if (res.ok) changed(action.type === 'clue');
     return res;
   }
 
-  function changed() {
-    liveKey = Math.random().toString(36).slice(2);
-    livePreview = null;
-    previewSignature = '';
+  function changed(keepPreview = false) {
+    if (!keepPreview) {
+      liveKey = Math.random().toString(36).slice(2);
+      livePreview = null;
+      previewSignature = '';
+    }
     save();
     render();
     listeners.forEach((fn) => fn());

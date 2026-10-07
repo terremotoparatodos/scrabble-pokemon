@@ -148,7 +148,7 @@ las cámaras, sin carteles repetidos sobre los personajes. Alrededor está el
 
 ## Reglas
 
-- **Atril:** 12 fichas de letra y 1 **ficha de tipo**.
+- **Atril:** 14 fichas de letra y 1 **ficha de tipo**.
 - **Comodín de letra ★:** la bolsa incluye 2. Representa cualquier letra de la
   A a la Z, elegida al colocarlo; vale 0 puntos incluso al cruzarse con otras
   palabras. La letra elegida queda fija hasta el fin de la partida. Al escribir
@@ -175,11 +175,22 @@ las cámaras, sin carteles repetidos sobre los personajes. Alrededor está el
   se conserva cuando ya coincide, y cualquier otro tipo sigue siendo válido.
   El atril avisa cuando hubo ajuste. Bots y pistas comparan las jugadas con
   el bonus x2 incluido.
+- **Reparto generoso:** además del mínimo de tres, busca **8 o más nombres
+  distintos** con cambios acotados al comenzar el turno. Este objetivo extra
+  usa letras de la bolsa y conserva los comodines. Cuando no puede alcanzar
+  ocho, mejora las opciones disponibles sin terminar anticipadamente la partida.
+  El atril muestra la cantidad real de Pokémon jugables.
+- **Pistas gratis:** tres tarjetas corresponden a tres Pokémon distintos que
+  realmente pueden jugarse. Se puede pedir **generación**, **tipo** o **inicial**
+  por separado, sin gastar puntos ni turno, y sin revelar nombre o posición.
+  OBS muestra las mismas pistas. Al cambiar una ficha se conservan los objetivos
+  válidos y se sustituyen los imposibles. Los límites por generación se verificaron
+  contra los recursos de [PokeAPI](https://pokeapi.co/api/v2/generation/).
 - **Cambiar 1:** cada jugador puede cambiar una sola ficha por ronda sin perder
   su turno. Sólo cambia esa ficha, conserva las tres alternativas y el límite
   queda guardado al recargar. Las pistas ya pagadas se actualizan sin cobrar otra.
 - **Otras acciones:** cambiar varias fichas y/o la ficha de tipo (usa el turno),
-  pasar, o pedir una pista (−5 puntos: muestra un Pokémon posible).
+  pasar, o **Revelar −5** (ayuda completa opcional: muestra un Pokémon posible).
 - **Fin:** al terminar las rondas elegidas, al vaciarse la bolsa (se termina
   la ronda), si todos pasan dos veces seguidas o cuando el tablero ya no permite
   tres Pokémon distintos jugables con un mismo atril.

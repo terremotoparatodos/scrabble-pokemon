@@ -13,8 +13,9 @@
 
   const SIZE = 15;
   const CENTER = 7;
-  const RACK_SIZE = 12;
+  const RACK_SIZE = 14;
   const MIN_OPTIONS = 3;
+  const TARGET_OPTIONS = 8;
   const BIG_PLAY_TILES = 7;
   const BIG_PLAY_BONUS = 20;
   const ANY_TYPE = 'any';
@@ -83,6 +84,9 @@
   const WORDS = [...BY_WORD.keys()];
 
   const isPokemon = (word) => BY_WORD.has(word);
+  // Límites de especies de /api/v2/generation/ de PokeAPI (incluye Hisui).
+  const GENERATION_ENDS = [151, 251, 386, 493, 649, 721, 809, 905, 1025];
+  const generationOf = (id) => Number.isInteger(id) && id >= 1 && id <= 1025 ? GENERATION_ENDS.findIndex((end) => id <= end) + 1 : null;
   const entriesFor = (word) => BY_WORD.get(word) || [];
 
   function wordHasType(word, type) {
@@ -256,6 +260,7 @@
     CENTER,
     RACK_SIZE,
     MIN_OPTIONS,
+    TARGET_OPTIONS,
     BIG_PLAY_TILES,
     BIG_PLAY_BONUS,
     ANY_TYPE,
@@ -269,6 +274,7 @@
     normalize,
     isPokemon,
     entriesFor,
+    generationOf,
     wordHasType,
     typeName,
     idx,

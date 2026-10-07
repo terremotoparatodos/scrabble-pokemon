@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Pokémon Scrabble</title>
     <meta name="description" content="Scrabble de Pokémon para hasta 4 jugadores: cada palabra es uno de los 1025 Pokémon." />
-    <link rel="stylesheet" href="styles.css?v=24" />
-    <link rel="stylesheet" href="effects.css?v=24" />
-    <link rel="stylesheet" href="stage.css?v=24" />
+    <link rel="stylesheet" href="styles.css?v=25" />
+    <link rel="stylesheet" href="effects.css?v=25" />
+    <link rel="stylesheet" href="stage.css?v=25" />
   </head>
   <body>
     <header class="topbar">
@@ -29,8 +29,8 @@
           <h2 id="setupTitle">¡Arma Pokémon con tus fichas!</h2>
           <p>
             Como el Scrabble, pero cada palabra tiene que ser <strong>uno de los 1025 Pokémon</strong>. Cada jugador tiene
-            <strong>12 fichas de letra</strong> y un <strong>tipo recomendado</strong>: puedes crear cualquier Pokémon,
-            pero si coincide con ese tipo, ganas <strong>x2 puntos</strong>. La bolsa reparte para que haya <strong>al menos 3 Pokémon distintos posibles</strong> y uno coincida con el tipo recomendado.
+            <strong>14 fichas de letra</strong> y un <strong>tipo recomendado</strong>: puedes crear cualquier Pokémon,
+            pero si coincide con ese tipo, ganas <strong>x2 puntos</strong>. El reparto busca <strong>8 o más Pokémon posibles</strong> y ofrece <strong>pistas gratis de generación, tipo e inicial</strong> para salir de los bloqueos.
           </p>
         </div>
 
@@ -152,16 +152,17 @@
       <div class="modal card rules">
         <h2 id="rulesTitle">❓ Cómo jugar</h2>
         <ol>
-          <li><strong>Tu atril:</strong> 12 fichas de letra. El tipo recomendado aparece en tu cámara, arriba en el turno y en una etiqueta pequeña sobre las letras.</li>
+          <li><strong>Tu atril:</strong> 14 fichas de letra. El tipo recomendado aparece en tu cámara, arriba en el turno y en una etiqueta pequeña sobre las letras.</li>
           <li><strong>Comodín de letra ★:</strong> hay 2 en la bolsa. Al colocarlo, eliges cualquier letra de la A a la Z. Vale 0 puntos y conserva esa letra durante la partida.</li>
           <li><strong>En tu turno</strong> pon fichas en una fila o columna para formar el nombre de un Pokémon (sin acentos ni signos: «Mr. Mime» es MRMIME).</li>
           <li><strong>Tipo recomendado:</strong> puedes crear cualquier Pokémon. Si coincide con el tipo de tu ficha (cualquiera de sus dos tipos), el puntaje total de esa jugada se duplica. ★ Comodín da x2 a cualquier Pokémon.</li>
           <li>La primera palabra pasa por la Poké Ball del centro. Después, cada Pokémon tiene que <strong>cruzarse o unirse</strong> con las fichas del tablero.</li>
           <li>Cada Pokémon se puede crear <strong>una sola vez</strong> por partida. Si se forman otras palabras de costado, también tienen que ser Pokémon.</li>
           <li><strong>Puntos:</strong> suma de las letras. x2/x3 letra multiplica esa ficha; x2/x3 palabra, todo el Pokémon (solo las casillas que cubres este turno). Usar 7 fichas o más: +20.</li>
-          <li><strong>Regla de oro:</strong> al empezar tu turno, tienes al menos 3 Pokémon distintos posibles y uno coincide con el tipo recomendado para el x2. La bolsa ajusta las fichas necesarias y te avisa.</li>
+          <li><strong>Más opciones:</strong> la bolsa busca 8 o más nombres distintos con tus fichas, conservando el mínimo de 3 cuando el tablero avanzado no permite tantas alternativas. El atril muestra la cantidad real y el x2 tiene una opción disponible.</li>
           <li><strong>Cambiar 1:</strong> cada jugador puede cambiar 1 ficha por ronda sin perder el turno. El botón se habilita nuevamente en la siguiente ronda.</li>
-          <li>También puedes <strong>cambiar</strong> varias fichas (y/o tu ficha de tipo), usando tu turno; <strong>pasar</strong> o pedir una <strong>pista</strong> (−5 puntos).</li>
+          <li><strong>Pistas gratis:</strong> tres Pokémon jugables, sin revelar sus nombres. Pedí generación, tipo o inicial por separado. No pierdes puntos ni turno. <strong>Revelar −5</strong> sigue disponible como ayuda completa opcional.</li>
+          <li>También puedes <strong>cambiar</strong> varias fichas (y/o tu ficha de tipo), usando tu turno, o <strong>pasar</strong>.</li>
           <li><strong>Fin:</strong> al terminar las rondas, al vaciarse la bolsa o cuando el tablero ya no permite 3 Pokémon distintos con un mismo atril. Gana quien tenga más puntos.</li>
         </ol>
         <p class="muted"><strong>Fichas:</strong> arrástralas del atril al tablero; dentro del atril las reordenas; para devolver una, haz clic en ella o suéltala sobre el atril. También: clic en una casilla vacía y escribe (otro clic cambia la dirección), Enter crea el Pokémon.</p>
@@ -172,47 +173,47 @@
 
     <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 
-    <script src="pokedex.js?v=24"></script>
-    <script src="rules.js?v=24"></script>
-    <script src="live-view.js?v=24"></script>
-    <script src="moves.js?v=24"></script>
-    <script src="game.js?v=24"></script>
-    <script src="dom.js?v=24"></script>
-    <script src="audio.js?v=24"></script>
-    <script src="board-view.js?v=24"></script>
-    <script src="rack-drag.js?v=24"></script>
-    <script src="play-panel.js?v=24"></script>
-    <script src="hud.js?v=24"></script>
-    <script src="cams.js?v=24"></script>
-    <script src="setup.js?v=24"></script>
-    <script src="hero.js?v=24"></script>
-    <script src="host.js?v=24"></script>
-    <script src="net-protocol.js?v=24"></script>
+    <script src="pokedex.js?v=25"></script>
+    <script src="rules.js?v=25"></script>
+    <script src="live-view.js?v=25"></script>
+    <script src="moves.js?v=25"></script>
+    <script src="game.js?v=25"></script>
+    <script src="dom.js?v=25"></script>
+    <script src="audio.js?v=25"></script>
+    <script src="board-view.js?v=25"></script>
+    <script src="rack-drag.js?v=25"></script>
+    <script src="play-panel.js?v=25"></script>
+    <script src="hud.js?v=25"></script>
+    <script src="cams.js?v=25"></script>
+    <script src="setup.js?v=25"></script>
+    <script src="hero.js?v=25"></script>
+    <script src="host.js?v=25"></script>
+    <script src="net-protocol.js?v=25"></script>
     <script src="vendor/peerjs.min.js"></script>
-    <script src="net-host.js?v=24"></script>
+    <script src="net-host.js?v=25"></script>
     <script type="importmap">
       {
         "imports": {
           "three": "./vendor/three/three.module.js",
           "three/addons/": "./vendor/three/addons/",
-          "./view3d/board3d.js": "./view3d/board3d.js?v=24",
-          "./view3d/camera.js": "./view3d/camera.js?v=24",
-          "./view3d/companions.js": "./view3d/companions.js?v=24",
-          "./view3d/fx.js": "./view3d/fx.js?v=24",
-          "./view3d/mouse.js": "./view3d/mouse.js?v=24",
-          "./view3d/particles.js": "./view3d/particles.js?v=24",
-          "./view3d/racks.js": "./view3d/racks.js?v=24",
-          "./view3d/scenery.js": "./view3d/scenery.js?v=24",
-          "./view3d/seats.js": "./view3d/seats.js?v=24",
-          "./view3d/stage.js": "./view3d/stage.js?v=24",
-          "./view3d/textures.js": "./view3d/textures.js?v=24",
-          "./view3d/tiles.js": "./view3d/tiles.js?v=24",
-          "./view3d/townmodels.js": "./view3d/townmodels.js?v=24",
-          "./view3d/tween.js": "./view3d/tween.js?v=24",
-          "./view3d/view3d.js": "./view3d/view3d.js?v=24"
+          "./view3d/board3d.js": "./view3d/board3d.js?v=25",
+          "./view3d/camera.js": "./view3d/camera.js?v=25",
+          "./view3d/companions.js": "./view3d/companions.js?v=25",
+          "./view3d/fx.js": "./view3d/fx.js?v=25",
+          "./view3d/mouse.js": "./view3d/mouse.js?v=25",
+          "./view3d/particles.js": "./view3d/particles.js?v=25",
+          "./view3d/racks.js": "./view3d/racks.js?v=25",
+          "./view3d/scenery.js": "./view3d/scenery.js?v=25",
+          "./view3d/seats.js": "./view3d/seats.js?v=25",
+          "./view3d/stage.js": "./view3d/stage.js?v=25",
+          "./view3d/textures.js": "./view3d/textures.js?v=25",
+          "./view3d/tiles.js": "./view3d/tiles.js?v=25",
+          "./view3d/townmodels.js": "./view3d/townmodels.js?v=25",
+          "./view3d/tween.js": "./view3d/tween.js?v=25",
+          "./view3d/view3d.js": "./view3d/view3d.js?v=25"
         }
       }
     </script>
-    <script type="module" src="view3d/view3d.js?v=24"></script>
+    <script type="module" src="view3d/view3d.js?v=25"></script>
   </body>
 </html>

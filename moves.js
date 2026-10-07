@@ -152,7 +152,7 @@
   }
 
   /** Tres nombres distintos, cada uno jugable por separado con el mismo atril. */
-  function ensurePlayable({ board, rack, bag, type, used, rng }) {
+  function ensureMinimum({ board, rack, bag, type, used, rng }) {
     const random = rng || Math.random;
     const options = placements(board, wordsOfType(R.ANY_TYPE, used));
     const ready = options.filter((p) => missingLetters(rack, p.place).length === 0);
@@ -233,6 +233,106 @@
     const playable = options.filter((p) => missingLetters(rack, p.place).length === 0);
     const recommended = recommendType(playable, type, random);
     return { type: recommended, changed: missing.length > 0, typeChanged: recommended !== type, move: best.moves[0] };
+  }
+
+  /** Búsqueda acotada de manos más variadas: como máximo 3 pasos y 4 ramas.
+   * No inventa fichas para el objetivo extra ni reemplaza los comodines.
+   * Cuenta nombres distintos, no varias ubicaciones del mismo Pokémon. */
+  function roomyRack(options, rack, bag, target) {
+    const seen = new Set();
+    const candidates = [];
+    for (const move of options) {
+      const needed = R.countLetters(move.place.map((t) => t.l));
+      const key = `${move.word}:${Object.entries(needed).sort().map((x) => x.join('')).join()}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      candidates.push({ move, needed });
+    }
+    function deficit(have, needed) {
+      let blanks = have[R.BLANK] || 0;
+      let missing = 0;
+      for (const [l, n] of Object.entries(needed)) {
+        const d = Math.max(0, n - (have[l] || 0));
+        const covered = Math.min(blanks, d);
+        blanks -= covered;
+        missing += d - covered;
+      }
+      return missing;
+    }
+    function evaluate(hand) {
+      const have = R.countLetters(hand);
+      const words = new Set();
+      for (const c of candidates) if (!deficit(have, c.needed)) words.add(c.move.word);
+      return { rack: hand, count: words.size, changes: hand.filter((l, i) => l !== rack[i]).length };
+    }
+    const initial = evaluate(rack);
+    if (initial.count >= target) return initial;
+    const available = R.countLetters([...bag, ...rack]);
+    let best = initial;
+    let beam = [initial];
+    const visited = new Set([rack.slice().sort().join('')]);
+    for (let depth = 0; depth < 3; depth++) {
+      const next = [];
+      for (const node of beam) {
+        const have = R.countLetters(node.rack);
+        const choices = candidates.map((c) => ({ ...c, deficit: deficit(have, c.needed) }))
+          .filter((c) => c.deficit > 0 && c.move.place.length <= node.rack.length)
+          .sort((a, b) => a.deficit - b.deficit || a.move.place.length - b.move.place.length).slice(0, 48);
+        for (const c of choices) {
+          const protect = { ...c.needed };
+          const letters = [];
+          let blanks = have[R.BLANK] || 0;
+          for (const [l, n] of Object.entries(c.needed)) {
+            const d = Math.max(0, n - (have[l] || 0));
+            const covered = Math.min(blanks, d);
+            blanks -= covered;
+            for (let k = covered; k < d; k++) letters.push(l);
+          }
+          const spare = [];
+          node.rack.forEach((l, i) => { if (l === R.BLANK) return; if (protect[l]) protect[l]--; else spare.push(i); });
+          spare.sort((a, b) => R.LETTER_POINTS[node.rack[b]] - R.LETTER_POINTS[node.rack[a]] || a - b);
+          if (spare.length < letters.length) continue;
+          const hand = [...node.rack];
+          letters.forEach((l, i) => { hand[spare[i]] = l; });
+          const signature = hand.slice().sort().join('');
+          if (visited.has(signature)) continue;
+          visited.add(signature);
+          if (Object.entries(R.countLetters(hand)).some(([l, n]) => n > (available[l] || 0))) continue;
+          const plan = evaluate(hand);
+          if (plan.count > best.count || (plan.count === best.count && plan.changes < best.changes)) best = plan;
+          if (plan.count >= target) return plan;
+          next.push(plan);
+        }
+      }
+      next.sort((a, b) => b.count - a.count || a.changes - b.changes);
+      beam = next.slice(0, 4);
+      if (!beam.length) break;
+    }
+    return best;
+  }
+
+  function ensurePlayable(args) {
+    const result = ensureMinimum(args);
+    if (!result.move) return result;
+    const { board, rack, bag, used, rng } = args;
+    const target = args.target || R.MIN_OPTIONS;
+    if (target > R.MIN_OPTIONS) {
+      const options = placements(board, wordsOfType(R.ANY_TYPE, used));
+      const plan = roomyRack(options, rack, bag, target);
+      if (plan.changes) {
+        const changes = plan.rack.map((l, i) => ({ l, i })).filter((t) => t.l !== rack[t.i]);
+        changes.forEach((t) => bag.push(rack[t.i]));
+        changes.forEach((t) => { rack[t.i] = takeFromBag(bag, t.l); });
+        result.changed = true;
+      }
+    }
+    const playable = findMoves(board, rack, result.type, used);
+    const recommended = recommendType(playable, result.type, rng || Math.random);
+    result.typeChanged = result.typeChanged || recommended !== result.type;
+    result.type = recommended;
+    result.optionCount = new Set(playable.map((m) => m.word)).size;
+    result.move = playable[0];
+    return result;
   }
 
   root.ScrabbleMoves = { placements, findMoves, bestMove, ensurePlayable, missingLetters, wordsOfType };

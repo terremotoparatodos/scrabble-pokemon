@@ -13,6 +13,7 @@
  *   { t:'act', a:'swap-one', indices:[i] }   cambiar una ficha sin perder el turno
  *   { t:'act', a:'exchange', indices, swapType }
  *   { t:'act', a:'pass' } · { t:'act', a:'hint' }
+ *   { t:'act', a:'clue', slot, detail }      dato gratuito: generation | types | initial
  *   { t:'ping' }                              latido (cada PING_MS)
  *   { t:'spectate' }                          vista OBS sin asiento, sigue el atril del turno
  *   { t:'preview', preview }                 jugada en preparación y cámara del jugador en turno

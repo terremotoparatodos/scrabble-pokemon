@@ -211,7 +211,7 @@ test('regresión: la mano SLEIECRNLE con Fantasma pasa a tres opciones y x2 posi
   assert.deepEqual(M.findMoves(board, rack, 'ghost', []).map((m) => m.word), ['SEEL']);
   const result = M.ensurePlayable({ board, rack, bag: R.newBag(), type: 'ghost', used: [], rng: seeded(1) });
   assert.equal(result.changed, true);
-  assert.equal(rack.length, R.RACK_SIZE);
+  assert.equal(rack.length, 12); // Esta mano de diez necesita sólo dos letras adicionales.
   assertOptions(board, rack, result.type, []);
   // Dos letras adicionales alcanzan: se conservan las diez fichas originales.
   const missing = M.missingLetters('SLEIECRNLE'.split(''), rack.map((l) => ({l})));
@@ -277,9 +277,10 @@ test('dos nombres distintos no alcanzan la nueva garantía de tres', () => {
   assert.equal(result.reason,'options');
 });
 
-test('el atril de doce permite nombres largos y conserva el límite de tres', () => {
-  assert.equal(R.RACK_SIZE,12);
+test('el atril de catorce permite nombres largos y busca ocho alternativas', () => {
+  assert.equal(R.RACK_SIZE,14);
   assert.equal(R.MIN_OPTIONS,3);
+  assert.equal(R.TARGET_OPTIONS,8);
   const long = R.WORDS.find((w) => w.length===12);
   assert.ok(long);
   const moves = M.findMoves(R.emptyBoard(),long.split(''),R.ANY_TYPE,[]);
@@ -510,10 +511,67 @@ test('partidas de diez fichas se amplían sin perder puntos ni el cambio usado',
   state.players[0].singleSwapRound=state.round;
   state.turnPolicyVersion=3;
   assert.equal(G.upgradeTurn(state,rng),true);
-  assert.ok(state.players.every((p)=>p.rack.length===12));
+  assert.ok(state.players.every((p)=>p.rack.length===14));
   assert.equal(state.players[0].score,123);
   assert.equal(G.publicView(state,0).players[0].singleSwapAvailable,false);
   assertOptions(state.board,state.players[0].rack,state.players[0].type,state.used);
+});
+
+test('reparto generoso: amplía las opciones sin crear letras ni gastar comodines', () => {
+  const rack=[...'SLEIECRNLEAAOO'];
+  const bag=R.newBag();
+  const total=R.countLetters([...rack,...bag]);
+  const result=M.ensurePlayable({board:R.emptyBoard(),rack,bag,type:'ghost',used:[],rng:seeded(8),target:R.TARGET_OPTIONS});
+  assert.ok(result.optionCount>=8);
+  assert.equal(rack.length,14);
+  assert.deepEqual(R.countLetters([...rack,...bag]),total);
+  assertOptions(R.emptyBoard(),rack,result.type,[]);
+});
+
+test('el objetivo de ocho no termina un tablero que todavía admite tres', () => {
+  const used=R.WORDS.filter(w=>!['MEW','MUK','MIMEJR'].includes(w));
+  const rack=[...'MEWMUKMIMEJRXX'];
+  const result=M.ensurePlayable({board:R.emptyBoard(),rack,bag:R.newBag(),type:'psychic',used,rng:seeded(1),target:8});
+  assert.ok(result.move);
+  assert.equal(result.optionCount,3);
+});
+
+test('pistas gratuitas: generación, tipos e inicial sólo revelan el dato pedido', () => {
+  const rng=seeded(23),state=fixtureGame(rng);
+  const snapshot=JSON.stringify({board:state.board,rack:state.players[0].rack,bag:state.bag,turn:state.turn,round:state.round,moveNo:state.moveNo,score:state.players[0].score});
+  for(const action of [{type:'clue',slot:-1,detail:'generation'},{type:'clue',slot:0,detail:'name'},{type:'clue',slot:3,detail:'initial'}])assert.equal(G.act(state,0,action,rng).ok,false);
+  assert.equal(G.act(state,1,{type:'clue',slot:0,detail:'types'},rng).ok,false);
+  for(let slot=0;slot<3;slot++)for(const detail of ['generation','types','initial']){
+    assert.equal(G.act(state,0,{type:'clue',slot,detail},rng).ok,true);
+    const target=state.guide[slot],entry=R.DEX[target.id-1],clue=G.publicView(state,0).clues[slot];
+    assert.equal(clue.id,undefined);assert.equal(clue.word,undefined);assert.equal(clue.name,undefined);
+    if(detail==='generation'){assert.equal(clue.generation,R.generationOf(entry.id));assert.equal(clue.types,null);assert.equal(clue.initial,null);}
+    if(detail==='types')assert.deepEqual(clue.types,entry.types);
+    if(detail==='initial')assert.equal(clue.initial,entry.word[0]);
+  }
+  assert.equal(new Set(state.guide.map(t=>t.word)).size,3);
+  const moves=M.findMoves(state.board,state.players[0].rack,state.players[0].type,state.used);
+  assert.ok(state.guide.every(t=>moves.some(m=>m.word===t.word)));
+  assert.equal(G.publicView(state,1).clues,null);
+  assert.equal(G.publicView(state,null).clues,null);
+  assert.deepEqual(G.spectatorView(state).clues,G.publicView(state,0).clues);
+  assert.equal(JSON.stringify({board:state.board,rack:state.players[0].rack,bag:state.bag,turn:state.turn,round:state.round,moveNo:state.moveNo,score:state.players[0].score}),snapshot);
+  const restored=JSON.parse(JSON.stringify(state));assert.deepEqual(G.publicView(restored,0).clues,G.publicView(state,0).clues);
+  G.act(state,0,{type:'pass'},rng);assert.equal(state.guide,null);
+});
+
+test('cambiar una ficha sustituye pistas imposibles y conserva las válidas', () => {
+  const rng=seeded(4),state=fixtureGame(rng);state.players[0].rack=[...'PIKACHUMEWXXAA'];state.players[0].type='electric';state.bag=['R'];
+  state.guide=[{word:'MEW',id:151,revealed:['initial']},{word:'PIKACHU',id:25,revealed:['generation']},{word:'PICHU',id:172,revealed:[]}];
+  const before=state.players[0].rack.slice();assert.equal(G.act(state,0,{type:'swap-one',indices:[7]},rng).ok,true);
+  assert.equal(state.players[0].rack.filter((l,i)=>l!==before[i]).length,1);
+  assert.notEqual(state.guide[0].word,'MEW');assert.deepEqual(state.guide[0].revealed,[]);
+  assert.equal(state.guide[1].word,'PIKACHU');assert.deepEqual(state.guide[1].revealed,['generation']);
+});
+
+test('generaciones por especie: límites de Kanto, Alola, Hisui y Paldea', () => {
+  for(const [id,generation]of [[1,1],[151,1],[152,2],[251,2],[386,3],[493,4],[649,5],[721,6],[722,7],[809,7],[810,8],[905,8],[906,9],[1025,9]])assert.equal(R.generationOf(id),generation);
+  for(const id of [0,1026,null,'25'])assert.equal(R.generationOf(id),null);
 });
 
 console.log(`✓ ${passed} pruebas`);

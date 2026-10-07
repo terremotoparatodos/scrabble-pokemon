@@ -70,11 +70,13 @@
     if (!view) { previous = null; return; }
     const entry = view.log[0];
     const signature = entry ? `${entry.n}:${entry.kind}:${entry.player}` : '';
+    const clueCount = (view.clues || []).reduce((n, clue) => n + ['generation', 'types', 'initial'].filter((key) => clue[key] != null).length, 0);
     if (previous && view.moveNo >= previous.moveNo) {
       if (signature !== previous.signature && entry) play(entry.kind);
       if (view.phase === 'over' && previous.phase !== 'over') play('win');
+      if (view.phase === 'play' && view.turn === previous.turn && clueCount > previous.clueCount) play('hint');
     }
-    previous = { signature, phase: view.phase, moveNo: view.moveNo };
+    previous = { signature, phase: view.phase, moveNo: view.moveNo, turn: view.turn, clueCount };
   }
 
   const control = document.getElementById('soundEnabled');

@@ -298,7 +298,7 @@
   const board = BV.createBoard($('boardWrap'), (r, c) => panel.tapCell(r, c));
   const panel = window.PlayPanel.create({
     container: $('playPanel'),
-    send: (action) => send({ t: 'act', a: action.type, tiles: action.tiles, indices: action.indices, swapType: action.swapType }),
+    send: (action) => send({ t: 'act', a: action.type, tiles: action.tiles, indices: action.indices, swapType: action.swapType, slot: action.slot, detail: action.detail }),
     onChange: () => { activeBoard().render(last.game, panel.boardExtra()); schedulePreview(); },
     onSound: (effect) => { if (conn?.open && last?.game?.phase === 'play' && last.you != null) conn.send({ t: 'sound', effect }); },
     getDropTarget: () => activeBoard(),
